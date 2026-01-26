@@ -65,3 +65,31 @@ export async function generatePatientCode(doctorId: number): Promise<string> {
   );
   return response.data.code;
 }
+
+// Therapy Plan Types
+export interface TherapyPlan {
+  id: number;
+  description?: string;
+  status?: string;
+  startDate: string;
+  endDate?: string;
+  exercises?: any[];
+}
+
+// Get ongoing plans for doctor
+export interface OngoingPlan {
+  id: number;
+  description?: string;
+  status?: string;
+  startDate: string;
+  endDate?: string;
+  patientId?: number;
+  patientName?: string;
+  progressPercentage?: number;
+  exercises?: any[];
+}
+
+export async function getOngoingPlans(doctorId: number): Promise<OngoingPlan[]> {
+  const response = await apiClient.get<OngoingPlan[]>(`/TherapyPlan/doctor/${doctorId}/ongoing-plans`);
+  return response.data;
+}

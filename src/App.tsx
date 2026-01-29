@@ -6,6 +6,10 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DoctorDashboard } from './pages/DoctorDashboard';
+import { PatientDashboard } from './pages/patient/PatientDashboard';
+import { PatientProfilePage } from './pages/patient/PatientProfilePage';
+import { PatientPlansPage } from './pages/patient/PatientPlansPage';
+import { PatientStatisticsPage } from './pages/patient/PatientStatisticsPage';
 import { PatientsListPage } from './pages/doctor/PatientsListPage';
 import { PatientDetailPage } from './pages/doctor/PatientDetailPage';
 import { InvitationCodePage } from './pages/doctor/InvitationCodePage';
@@ -96,6 +100,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <StatisticsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/profile"
+            element={
+              <ProtectedRoute>
+                <PatientProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/plans"
+            element={
+              <ProtectedRoute>
+                <PatientPlansPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/statistics"
+            element={
+              <ProtectedRoute>
+                <PatientStatisticsPage />
               </ProtectedRoute>
             }
           />

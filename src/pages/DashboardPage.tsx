@@ -1,6 +1,6 @@
 import { useAuth } from '../hooks/useAuth';
 import { DoctorDashboard } from './DoctorDashboard';
-import { PatientDashboard } from './PatientDashboard';
+import { PatientDashboard } from './patient/PatientDashboard';
 
 export function DashboardPage() {
   const { user, isLoading } = useAuth();

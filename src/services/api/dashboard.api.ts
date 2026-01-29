@@ -11,6 +11,8 @@ export interface ExerciseProgressDto {
 export interface PatientDashboardDto {
   planId: number;
   planName: string;
+  planStatus?: string;
+  progressPercentage?: number;
   exercises: ExerciseProgressDto[];
 }
 

@@ -25,7 +25,6 @@ export function PatientDetailPage() {
     startDate: new Date().toISOString().split('T')[0],
     endDate: '',
   });
-  const [editingPlanId, setEditingPlanId] = useState<number | null>(null);
   const [planProgress, setPlanProgress] = useState<Record<number, number>>({});
   const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
   const [showAddExerciseForm, setShowAddExerciseForm] = useState<number | null>(null);

@@ -154,6 +154,9 @@ export function PatientDashboard() {
                         <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700">
                           Score
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-700">
+                          Action
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
@@ -167,6 +170,10 @@ export function PatientDashboard() {
                               <span className="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
                                 Completed
                               </span>
+                            ) : exercise.started ? (
+                              <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                                In Progress
+                              </span>
                             ) : (
                               <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-800">
                                 Pending
@@ -177,6 +184,20 @@ export function PatientDashboard() {
                             {exercise.score !== undefined && exercise.score !== null
                               ? `${exercise.score}%`
                               : 'N/A'}
+                          </td>
+                          <td className="whitespace-nowrap px-6 py-4 text-sm">
+                            {exercise.exerciseName === 'Pronounce one word' && (
+                              <button
+                                onClick={() =>
+                                  navigate(
+                                    `/patient/exercise/${currentPlan.planId}/${exercise.planExerciseId}`
+                                  )
+                                }
+                                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                              >
+                                {exercise.completed ? 'Review' : 'Practice'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

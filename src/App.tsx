@@ -6,9 +6,9 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { DoctorDashboard } from './pages/DoctorDashboard';
-import { PatientDashboard } from './pages/patient/PatientDashboard';
 import { PatientProfilePage } from './pages/patient/PatientProfilePage';
 import { PatientPlansPage } from './pages/patient/PatientPlansPage';
+import { PronounceWordExercisePage } from './pages/patient/PronounceWordExercisePage';
 import { PatientStatisticsPage } from './pages/patient/PatientStatisticsPage';
 import { PatientsListPage } from './pages/doctor/PatientsListPage';
 import { PatientDetailPage } from './pages/doctor/PatientDetailPage';
@@ -116,6 +116,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PatientPlansPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/exercise/:planId/:planExerciseId"
+            element={
+              <ProtectedRoute>
+                <PronounceWordExercisePage />
               </ProtectedRoute>
             }
           />

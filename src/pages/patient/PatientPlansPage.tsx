@@ -112,6 +112,9 @@ export function PatientPlansPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-700">
                           Score
                         </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium uppercase text-slate-700">
+                          Action
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 bg-white">
@@ -125,6 +128,10 @@ export function PatientPlansPage() {
                               <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
                                 Completed
                               </span>
+                            ) : ex.started ? (
+                              <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                                In Progress
+                              </span>
                             ) : (
                               <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-800">
                                 Pending
@@ -133,6 +140,20 @@ export function PatientPlansPage() {
                           </td>
                           <td className="px-6 py-4 text-sm text-slate-600">
                             {ex.score != null ? `${ex.score}%` : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-sm">
+                            {ex.exerciseName === 'Pronounce one word' && (
+                              <button
+                                onClick={() =>
+                                  navigate(
+                                    `/patient/exercise/${plan.planId}/${ex.planExerciseId}`
+                                  )
+                                }
+                                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
+                              >
+                                {ex.completed ? 'Review' : 'Practice'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}

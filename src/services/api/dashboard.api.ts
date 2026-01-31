@@ -2,9 +2,11 @@ import apiClient from './axios';
 
 // Patient Dashboard Types
 export interface ExerciseProgressDto {
+  planExerciseId: number;
   exerciseId: number;
   exerciseName: string;
   completed: boolean;
+  started: boolean;
   score?: number;
 }
 

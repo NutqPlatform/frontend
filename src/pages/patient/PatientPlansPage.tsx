@@ -130,7 +130,7 @@ export function PatientPlansPage() {
                               </span>
                             ) : ex.started ? (
                               <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
-                                In Progress
+                                In Progress • Rep {ex.currentRepetition}/{ex.totalRepetitions}
                               </span>
                             ) : (
                               <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-800">

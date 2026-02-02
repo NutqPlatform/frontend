@@ -8,6 +8,8 @@ export interface ExerciseProgressDto {
   completed: boolean;
   started: boolean;
   score?: number;
+  currentRepetition: number;
+  totalRepetitions: number;
 }
 
 export interface PatientDashboardDto {

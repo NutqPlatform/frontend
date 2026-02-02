@@ -82,6 +82,8 @@ export interface ExerciseProgressDto {
   score?: number;
   completed: boolean;
   exerciseName: string;
+  currentRepetition: number;
+  totalRepetitions: number;
 }
 
 export async function getPatientProgress(
@@ -89,6 +91,16 @@ export async function getPatientProgress(
 ): Promise<ExerciseProgressDto[]> {
   const response = await apiClient.get<ExerciseProgressDto[]>(
     `/exercise-progress/patient/${patientId}`
+  );
+  return response.data;
+}
+
+export async function completeRepetition(
+  patientId: number,
+  planExerciseId: number
+): Promise<{ message: string }> {
+  const response = await apiClient.post<{ message: string }>(
+    `/patient-exercises/${patientId}/exercises/${planExerciseId}/complete-repetition`
   );
   return response.data;
 }

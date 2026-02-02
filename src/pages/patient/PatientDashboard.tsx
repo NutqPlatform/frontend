@@ -172,7 +172,7 @@ export function PatientDashboard() {
                               </span>
                             ) : exercise.started ? (
                               <span className="inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
-                                In Progress
+                                In Progress • Rep {exercise.currentRepetition}/{exercise.totalRepetitions}
                               </span>
                             ) : (
                               <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-800">

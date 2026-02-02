@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { VocabularyDto } from '../../services/api/patient-exercises.api';
 import { ChevronLeft, ChevronRight, Volume2 } from 'lucide-react';
 
@@ -103,8 +103,8 @@ export function PhotoFrameExercise({
         <div className="mb-8 rounded-xl bg-white p-8 shadow-lg ring-1 ring-slate-200">
           {currentWord ? (
             <div className="flex flex-col items-center gap-6">
-              {/* Image */}
-              <div className="aspect-square w-full max-w-sm overflow-hidden rounded-lg bg-slate-100">
+              {/* Image with overlay play button (match VocabularyCard patient UI) */}
+              <div className="aspect-square w-full max-w-sm overflow-hidden rounded-lg bg-slate-100 relative">
                 {currentWord.imageUrl ? (
                   <img
                     src={`${baseUrl}${currentWord.imageUrl}`}
@@ -116,6 +116,27 @@ export function PhotoFrameExercise({
                     🎯
                   </div>
                 )}
+
+                <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10">
+                  <button
+                    onClick={handlePlay}
+                    disabled={!currentWord.soundUrl}
+                    className={`flex h-14 w-14 items-center justify-center rounded-full shadow-lg transition-all ${
+                      currentWord.soundUrl
+                        ? 'bg-amber-500 text-white hover:scale-110 hover:bg-amber-600 active:scale-95'
+                        : 'cursor-not-allowed bg-slate-300 text-slate-500'
+                    }`}
+                    title={currentWord.soundUrl ? 'Play pronunciation' : 'No audio available'}
+                  >
+                    <svg
+                      className={`h-6 w-6 ${isPlaying ? 'animate-pulse' : ''}`}
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {/* Word Information */}
@@ -130,20 +151,6 @@ export function PhotoFrameExercise({
                   {currentWord.wordArabic}
                 </p>
               </div>
-
-              {/* Play button */}
-              <button
-                onClick={handlePlay}
-                disabled={!currentWord.soundUrl || isPlaying}
-                className={`flex items-center gap-2 rounded-full px-6 py-3 text-lg font-semibold shadow-md transition-all ${
-                  currentWord.soundUrl && !isPlaying
-                    ? 'bg-amber-500 text-white hover:scale-105 hover:bg-amber-600 active:scale-95'
-                    : 'cursor-not-allowed bg-slate-300 text-slate-500'
-                }`}
-              >
-                <Volume2 className="h-5 w-5" />
-                {isPlaying ? 'Playing...' : 'Play Pronunciation'}
-              </button>
             </div>
           ) : (
             <div className="py-12 text-center">

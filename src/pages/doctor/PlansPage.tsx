@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getOngoingPlans } from '../../services/api/dashboard.api';
+import { createWeeklyReport, updateWeeklyReport, getReportByPlan, type WeeklyReportDto } from '../../services/api/weeklyReport.api';
 import type { OngoingPlan } from '../../services/api/dashboard.api';
 
 export function PlansPage() {
@@ -10,6 +11,7 @@ export function PlansPage() {
   const [plans, setPlans] = useState<OngoingPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reportsByPlan, setReportsByPlan] = useState<Record<number, WeeklyReportDto | null>>({});
 
   useEffect(() => {
     if (user?.id && user?.role === 'doctor') {
@@ -26,6 +28,13 @@ export function PlansPage() {
     try {
       const plansData = await getOngoingPlans(user.id);
       setPlans(plansData);
+
+      // Load reports for each plan
+      const reports: Record<number, WeeklyReportDto | null> = {};
+      for (const plan of plansData) {
+        reports[plan.id] = await getReportByPlan(plan.id);
+      }
+      setReportsByPlan(reports);
     } catch (err) {
       setError('Failed to load plans');
       console.error(err);
@@ -125,15 +134,70 @@ export function PlansPage() {
                       <span className="font-medium">Exercises:</span> {plan.exercises.length}
                     </div>
                   )}
+                  {reportsByPlan[plan.id] && (
+                    <div>
+                      <span className="font-medium text-green-700">✓ Weekly Report:</span>{' '}
+                      <span className="text-green-700">Added</span>
+                    </div>
+                  )}
                 </div>
 
                 {plan.patientId && (
-                  <button
-                    onClick={() => navigate(`/doctor/patients/${plan.patientId}`)}
-                    className="mt-4 w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-                  >
-                    View Patient Details
-                  </button>
+                  <div className="mt-4 space-y-2">
+                    <button
+                      onClick={() => navigate(`/doctor/patients/${plan.patientId}`)}
+                      className="w-full rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                    >
+                      View Patient Details
+                    </button>
+
+                    {/* Show Add/Edit Report button when plan is completed/paused or endDate passed */}
+                {(plan.status === 'Completed' || plan.status === 'Paused' || plan.status === 'Ended' || (plan.endDate && new Date(plan.endDate) < new Date())) && (
+                      <button
+                        onClick={async () => {
+                          const notes = window.prompt(
+                            `Enter weekly report notes${reportsByPlan[plan.id] ? ' (edit mode)' : ''}:`
+                          );
+                          if (notes === null) return;
+                          try {
+                            const start = plan.startDate || new Date().toISOString();
+                            const end = plan.endDate || new Date().toISOString();
+                            
+                            if (reportsByPlan[plan.id]) {
+                              await updateWeeklyReport(reportsByPlan[plan.id]!.id, {
+                                doctorId: user!.id,
+                                patientId: plan.patientId!,
+                                therapyPlanId: plan.id,
+                                startDate: start,
+                                endDate: end,
+                                totalHours: 0,
+                                doctorNotes: notes,
+                              });
+                              alert('Weekly report updated');
+                            } else {
+                              await createWeeklyReport({
+                                doctorId: user!.id,
+                                patientId: plan.patientId!,
+                                therapyPlanId: plan.id,
+                                startDate: start,
+                                endDate: end,
+                                totalHours: 0,
+                                doctorNotes: notes,
+                              });
+                              alert('Weekly report created');
+                            }
+                            await loadPlans();
+                          } catch (err) {
+                            console.error(err);
+                            alert('Failed to save weekly report');
+                          }
+                        }}
+                        className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                      >
+                        {reportsByPlan[plan.id] ? 'Edit Weekly Report' : 'Add Weekly Report'}
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             ))

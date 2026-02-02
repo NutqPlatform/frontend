@@ -75,7 +75,7 @@ export function PatientDashboard() {
         )}
 
         {/* Navigation Icons */}
-        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-4">
           <button
             onClick={() => navigate('/patient/plans')}
             className="group flex flex-col items-center justify-center rounded-lg bg-white p-8 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-50 hover:shadow-md"
@@ -83,6 +83,14 @@ export function PatientDashboard() {
             <div className="mb-4 text-5xl">📋</div>
             <div className="text-lg font-medium text-slate-900">Plans</div>
             <div className="mt-1 text-sm text-slate-600">View all therapy plans</div>
+          </button>
+          <button
+            onClick={() => navigate('/patient/reports')}
+            className="group flex flex-col items-center justify-center rounded-lg bg-white p-8 shadow-sm ring-1 ring-slate-200 transition-all hover:bg-slate-50 hover:shadow-md"
+          >
+            <div className="mb-4 text-5xl">📄</div>
+            <div className="text-lg font-medium text-slate-900">Reports</div>
+            <div className="mt-1 text-sm text-slate-600">View weekly reports</div>
           </button>
           <button
             onClick={() => navigate('/patient/statistics')}

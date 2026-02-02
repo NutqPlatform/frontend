@@ -96,6 +96,6 @@ export interface OngoingPlan {
 }
 
 export async function getOngoingPlans(doctorId: number): Promise<OngoingPlan[]> {
-  const response = await apiClient.get<OngoingPlan[]>(`/TherapyPlan/doctor/${doctorId}/ongoing-plans`);
+  const response = await apiClient.get<OngoingPlan[]>(`/TherapyPlan/doctor/${doctorId}/plans/all`);
   return response.data;
 }

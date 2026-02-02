@@ -8,6 +8,7 @@ import { DashboardPage } from './pages/DashboardPage';
 import { DoctorDashboard } from './pages/DoctorDashboard';
 import { PatientProfilePage } from './pages/patient/PatientProfilePage';
 import { PatientPlansPage } from './pages/patient/PatientPlansPage';
+import { PatientReportsPage } from './pages/patient/PatientReportsPage';
 import { PronounceWordExercisePage } from './pages/patient/PronounceWordExercisePage';
 import { PatientStatisticsPage } from './pages/patient/PatientStatisticsPage';
 import { PatientsListPage } from './pages/doctor/PatientsListPage';
@@ -15,6 +16,7 @@ import { PatientDetailPage } from './pages/doctor/PatientDetailPage';
 import { InvitationCodePage } from './pages/doctor/InvitationCodePage';
 import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
 import { PlansPage } from './pages/doctor/PlansPage';
+import { ExercisesPage } from './pages/doctor/ExercisesPage';
 import { StatisticsPage } from './pages/doctor/StatisticsPage';
 
 function App() {
@@ -95,6 +97,16 @@ function App() {
               </ProtectedRoute>
             }
           />
+
+          <Route
+            path="/doctor/exercises"
+            element={
+              <ProtectedRoute>
+                <ExercisesPage />
+              </ProtectedRoute>
+            }
+          />
+          
           <Route
             path="/doctor/statistics"
             element={
@@ -116,6 +128,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PatientPlansPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/reports"
+            element={
+              <ProtectedRoute>
+                <PatientReportsPage />
               </ProtectedRoute>
             }
           />

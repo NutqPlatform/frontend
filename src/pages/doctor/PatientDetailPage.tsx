@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getPatientDetails, getPatientPlans, createPlan, updatePatientDiagnosis, deleteExerciseFromPlan, updatePlanStatus, getPlanProgress } from '../../services/api/patients.api';
 import { getAllExercises, addExerciseToPlan } from '../../services/api/exercises.api';
+import { createWeeklyReport, updateWeeklyReport, getReportByPlan } from '../../services/api/weeklyReport.api';
 import type { PatientDetails, TherapyPlan } from '../../services/api/patients.api';
 import type { Exercise, AddExerciseToPlanRequest } from '../../services/api/exercises.api';
 
@@ -35,6 +36,12 @@ export function PatientDetailPage() {
     aiConstraints: '',
   });
   const [isAddingExercise, setIsAddingExercise] = useState(false);
+  const [reportsByPlan, setReportsByPlan] = useState<Record<number, any>>({});
+  const [selectedReport, setSelectedReport] = useState<any | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportNotes, setReportNotes] = useState('');
+  const [isSavingReport, setIsSavingReport] = useState(false);
 
   useEffect(() => {
     if (user?.id && user?.role === 'doctor' && id) {
@@ -87,6 +94,22 @@ export function PatientDetailPage() {
           progressMap[planId] = progress;
         });
         setPlanProgress(progressMap);
+
+        // Load reports for each plan
+        const reportPromises = plansData.map(async (plan) => {
+          try {
+            const report = await getReportByPlan(plan.id);
+            return { planId: plan.id, report };
+          } catch {
+            return { planId: plan.id, report: null };
+          }
+        });
+        const reportResults = await Promise.all(reportPromises);
+        const reportMap: Record<number, any> = {};
+        reportResults.forEach(({ planId, report }) => {
+          reportMap[planId] = report;
+        });
+        setReportsByPlan(reportMap);
       } catch (plansErr: any) {
         console.warn('Failed to load plans:', plansErr);
         // Set empty plans array if loading fails
@@ -197,6 +220,59 @@ export function PatientDetailPage() {
       setError(err?.response?.data?.error || 'Failed to add exercise');
     } finally {
       setIsAddingExercise(false);
+    }
+  };
+
+  const handleSaveReport = async (planId: number) => {
+    if (!user?.id || !reportNotes.trim()) {
+      setError('Please add notes for the report');
+      return;
+    }
+
+    setIsSavingReport(true);
+    try {
+      if (selectedReport) {
+        // Update existing report
+        await updateWeeklyReport(selectedReport.id, {
+          doctorId: selectedReport.doctorId,
+          patientId: selectedReport.patientId,
+          therapyPlanId: selectedReport.therapyPlanId,
+          startDate: selectedReport.startDate,
+          endDate: selectedReport.endDate,
+          totalHours: selectedReport.totalHours,
+          doctorNotes: reportNotes,
+        });
+      } else {
+        // Create new report
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setDate(startDate.getDate() + 7);
+
+        await createWeeklyReport({
+          doctorId: user.id,
+          patientId: parseInt(id!),
+          therapyPlanId: planId,
+          startDate: startDate.toISOString().split('T')[0],
+          endDate: endDate.toISOString().split('T')[0],
+          totalHours: 0,
+          doctorNotes: reportNotes,
+        });
+      }
+
+      // Reload reports for this plan
+      const report = await getReportByPlan(planId);
+      setReportsByPlan((prev) => ({
+        ...prev,
+        [planId]: report,
+      }));
+
+      setShowReportModal(false);
+      setReportNotes('');
+      setSelectedReport(null);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Failed to save report');
+    } finally {
+      setIsSavingReport(false);
     }
   };
 
@@ -429,6 +505,7 @@ export function PatientDetailPage() {
                           <option value="Active">Active</option>
                           <option value="Paused">Paused</option>
                           <option value="Completed">Completed</option>
+                          <option value="Ended">Ended</option>
                         </select>
                       </div>
                     </div>
@@ -554,6 +631,41 @@ export function PatientDetailPage() {
                         <div className="text-xs text-slate-400">No exercises added yet</div>
                       )}
                     </div>
+
+                    {/* Weekly Report Section */}
+                    {plan.status && ['Completed', 'Paused', 'Ended'].includes(plan.status) && (
+                      <div className="mt-4 border-t border-slate-200 pt-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-sm font-medium text-slate-700">Weekly Report</span>
+                          <button
+                            onClick={() => {
+                              const report = reportsByPlan[plan.id];
+                              setSelectedPlanId(plan.id);
+                              setSelectedReport(report || null);
+                              const notes = (report?.doctorNotes as string) || '';
+                              setReportNotes(notes);
+                              setShowReportModal(true);
+                            }}
+                            className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800"
+                          >
+                            {reportsByPlan[plan.id] ? 'Edit Report' : 'Add Report'}
+                          </button>
+                        </div>
+                        {reportsByPlan[plan.id] ? (
+                          <div className="rounded border border-green-200 bg-green-50 p-3 text-xs">
+                            <p className="font-medium text-green-900 mb-1">Report Added</p>
+                            <p className="text-green-700 whitespace-pre-wrap break-words">{reportsByPlan[plan.id].doctorNotes}</p>
+                            <p className="text-green-600 text-xs mt-2">
+                              Last updated: {new Date(reportsByPlan[plan.id].endDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="rounded border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-700">
+                            No report added yet. Click "Add Report" to create one.
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -561,6 +673,55 @@ export function PatientDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Weekly Report Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-96 overflow-y-auto">
+            <div className="border-b border-slate-200 p-6">
+              <h2 className="text-lg font-semibold text-slate-900">
+                {selectedReport ? 'Edit Weekly Report' : 'Add Weekly Report'}
+              </h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Doctor Notes</label>
+                <textarea
+                  value={reportNotes}
+                  onChange={(e) => setReportNotes(e.target.value)}
+                  placeholder="Enter doctor notes for this week..."
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
+                  rows={4}
+                />
+              </div>
+              <div className="flex gap-3 pt-4 border-t border-slate-200">
+                <button
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setReportNotes('');
+                    setSelectedReport(null);
+                    setSelectedPlanId(null);
+                  }}
+                  className="flex-1 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedPlanId) {
+                      handleSaveReport(selectedPlanId);
+                    }
+                  }}
+                  disabled={isSavingReport}
+                  className="flex-1 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:bg-slate-400"
+                >
+                  {isSavingReport ? 'Saving...' : 'Save Report'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

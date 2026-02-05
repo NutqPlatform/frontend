@@ -1,4 +1,5 @@
 import type { ExerciseState } from '../../services/api/patient-exercises.api';
+import { Target, Play, Trophy } from 'lucide-react';
 
 interface ExerciseStateBadgeProps {
   state: ExerciseState;
@@ -7,30 +8,34 @@ interface ExerciseStateBadgeProps {
 export function ExerciseStateBadge({ state }: ExerciseStateBadgeProps) {
   const config = {
     not_started: {
-      label: 'Not Started',
-      className: 'bg-slate-100 text-slate-700 ring-slate-200',
-      dotClass: 'bg-slate-400',
+      label: 'Ready for Adventure!',
+      className: 'bg-blue-100 text-blue-800 border-2 border-blue-300',
+      icon: <Target className="w-4 h-4" />,
+      dotClass: 'bg-blue-500',
     },
     started: {
-      label: 'In Progress',
-      className: 'bg-amber-50 text-amber-800 ring-amber-200',
-      dotClass: 'bg-amber-500 animate-pulse',
+      label: 'Adventure in Progress!',
+      className: 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300',
+      icon: <Play className="w-4 h-4" />,
+      dotClass: 'bg-yellow-500 animate-pulse',
     },
     completed: {
-      label: 'Completed',
-      className: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-      dotClass: 'bg-emerald-500',
+      label: 'Mission Complete! 🎉',
+      className: 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-300',
+      icon: <Trophy className="w-4 h-4" />,
+      dotClass: 'bg-green-500',
     },
   };
 
-  const { label, className, dotClass } = config[state];
+  const { label, className, icon, dotClass } = config[state];
 
   return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ring-1 ${className}`}
-    >
-      <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+    <div className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${className}`}>
+      <div className="flex items-center gap-2">
+        <div className={`h-3 w-3 rounded-full ${dotClass}`} />
+        {icon}
+      </div>
       {label}
-    </span>
+    </div>
   );
 }

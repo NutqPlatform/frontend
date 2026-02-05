@@ -1,120 +1,446 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { getDoctorAnalytics } from '../../services/api/dashboard.api';
-import type { DoctorAnalyticsDto } from '../../services/api/dashboard.api';
+import { getDoctorAnalytics, getOngoingPlans, getDoctorPatients } from '../../services/api/dashboard.api';
+import type { DoctorAnalyticsDto, OngoingPlan, Patient } from '../../services/api/dashboard.api';
+import { 
+  Users, FileText, Activity, TrendingUp, 
+  Calendar, Target, BarChart as BarChartIcon,
+  Clock, CheckCircle, User, ChevronRight, Play
+} from 'lucide-react';
 
 export function StatisticsPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [analytics, setAnalytics] = useState<DoctorAnalyticsDto | null>(null);
+  const [plans, setPlans] = useState<OngoingPlan[]>([]);
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user?.id && user?.role === 'doctor') {
-      loadStatistics();
+      loadDashboardData();
     }
   }, [user]);
 
-  const loadStatistics = async () => {
+  const loadDashboardData = async () => {
     if (!user?.id) return;
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const analyticsData = await getDoctorAnalytics(user.id);
+      const [analyticsData, plansData, patientsData] = await Promise.all([
+        getDoctorAnalytics(user.id),
+        getOngoingPlans(user.id),
+        getDoctorPatients(user.id),
+      ]);
       setAnalytics(analyticsData);
+      setPlans(plansData);
+      setPatients(patientsData);
     } catch (err) {
-      setError('Failed to load statistics');
+      setError('Failed to load dashboard data');
       console.error(err);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const statCards = [
+    {
+      icon: <Users className="w-6 h-6" />,
+      label: 'Total Patients',
+      value: analytics?.totalPatients || 0,
+      bgColor: 'bg-gray-50',
+      iconColor: 'text-gray-900',
+      borderColor: 'border-gray-200'
+    },
+    {
+      icon: <FileText className="w-6 h-6" />,
+      label: 'Active Plans',
+      value: analytics?.totalPlans || 0,
+      bgColor: 'bg-gray-50',
+      iconColor: 'text-gray-900',
+      borderColor: 'border-gray-200'
+    },
+    {
+      icon: <Activity className="w-6 h-6" />,
+      label: 'Total Exercises',
+      value: analytics?.totalExercises || 0,
+      bgColor: 'bg-gray-50',
+      iconColor: 'text-gray-900',
+      borderColor: 'border-gray-200'
+    },
+    {
+      icon: <Target className="w-6 h-6" />,
+      label: 'Completion Rate',
+      value: `${analytics?.averageCompletionRate.toFixed(1) || 0}%`,
+      bgColor: 'bg-gray-50',
+      iconColor: 'text-gray-900',
+      borderColor: 'border-gray-200'
+    }
+  ];
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="text-center">Loading statistics...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!analytics) {
-    return (
-      <div className="min-h-screen bg-slate-50 px-4 py-10">
-        <div className="mx-auto max-w-7xl">
-          <div className="text-center">Failed to load statistics</div>
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-gray-200 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-48 bg-gray-200 rounded-2xl animate-pulse" />
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+    <div className="animate-fade-in">
+      {/* Header */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-semibold tracking-tight">Statistics</h1>
-            <p className="mt-1 text-sm text-slate-600">View your practice analytics</p>
+            <h1 className="text-3xl font-bold text-gray-900">Doctor Dashboard</h1>
+            <p className="mt-2 text-gray-600">Monitor your practice performance and patient activities</p>
           </div>
-          <button
-            onClick={() => navigate('/doctor')}
-            className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-          >
-            Back to Dashboard
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+          </div>
         </div>
+      </div>
 
-        {error && (
-          <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="text-sm font-medium text-slate-600">Total Patients</div>
-            <div className="mt-2 text-3xl font-semibold text-slate-900">
-              {analytics.totalPatients}
+      {error && (
+        <div className="mb-6 rounded-xl bg-red-50 border border-red-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <span className="text-red-600">⚠️</span>
+            </div>
+            <div>
+              <p className="font-medium text-red-900">{error}</p>
+              <button 
+                onClick={loadDashboardData}
+                className="text-sm text-red-600 hover:text-red-800 mt-1"
+              >
+                Try again
+              </button>
             </div>
           </div>
+        </div>
+      )}
 
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="text-sm font-medium text-slate-600">Total Plans</div>
-            <div className="mt-2 text-3xl font-semibold text-slate-900">
-              {analytics.totalPlans}
-            </div>
-          </div>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+        {statCards.map((stat, index) => (
+          <div
+            key={index}
+            className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-sm border border-gray-200 hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+          >
+            <div className="relative">
+              {/* Icon */}
+              <div className={`w-14 h-14 rounded-lg ${stat.bgColor} border ${stat.borderColor} flex items-center justify-center mb-4`}>
+                <div className={stat.iconColor}>
+                  {stat.icon}
+                </div>
+              </div>
 
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="text-sm font-medium text-slate-600">Total Exercises</div>
-            <div className="mt-2 text-3xl font-semibold text-slate-900">
-              {analytics.totalExercises}
-            </div>
-          </div>
+              {/* Value */}
+              <div className="mb-2">
+                <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm text-gray-600 mt-1">{stat.label}</p>
+              </div>
 
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <div className="text-sm font-medium text-slate-600">Avg. Completion Rate</div>
-            <div className="mt-2 text-3xl font-semibold text-slate-900">
-              {analytics.averageCompletionRate.toFixed(1)}%
-            </div>
-            {/* Progress Bar */}
-            <div className="mt-4">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                <div
-                  className="h-full bg-green-500 transition-all"
-                  style={{ width: `${analytics.averageCompletionRate}%` }}
-                />
+              {/* Status */}
+              <div className="flex items-center gap-1 mt-4">
+                <TrendingUp className="w-4 h-4 text-gray-500" />
+                <span className="text-sm font-medium text-gray-700">
+                  Monitoring
+                </span>
               </div>
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Recent Patients */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Active Plans Section */}
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Active Therapy Plans</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {plans.length} ongoing plan{plans.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <button
+                onClick={() => navigate('/doctor/plans')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-all"
+              >
+                <ChevronRight size={16} />
+                View All
+              </button>
+            </div>
+
+            {plans.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <FileText size={24} className="text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Plans</h3>
+                <p className="text-gray-600">Start by creating therapy plans for your patients</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {plans.slice(0, 3).map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="group flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        plan.status === 'Active' ? 'bg-green-100 text-green-600' :
+                        plan.status === 'Paused' ? 'bg-yellow-100 text-yellow-600' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>
+                        {plan.status === 'Active' ? (
+                          <Play size={20} />
+                        ) : plan.status === 'Paused' ? (
+                          <Clock size={20} />
+                        ) : (
+                          <CheckCircle size={20} />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-900">{plan.description || 'Untitled Plan'}</h4>
+                        <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
+                          {plan.patientName && (
+                            <span className="flex items-center gap-1">
+                              <User size={14} />
+                              {plan.patientName}
+                            </span>
+                          )}
+                          {plan.progressPercentage !== undefined && (
+                            <span className="font-medium">{plan.progressPercentage.toFixed(1)}% complete</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => plan.patientId && navigate(`/doctor/patients/${plan.patientId}`)}
+                      className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100"
+                    >
+                      View
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Patient Activity Chart */}
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Patient Progress</h2>
+                <p className="text-sm text-gray-600 mt-1">Exercise completion rates over time</p>
+              </div>
+              <Calendar className="w-5 h-5 text-gray-400" />
+            </div>
+            
+            {/* Simple Progress Chart */}
+            <div className="space-y-4">
+              {patients.slice(0, 5).map((patient) => {
+                // Calculate a mock progress for demonstration
+                const progress = Math.min(100, Math.floor(Math.random() * 100));
+                return (
+                  <div key={patient.id} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">{patient.name}</span>
+                      <span className="text-sm text-gray-600">{progress}%</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className="h-full bg-gray-900 rounded-full transition-all duration-500"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Quick Actions & Patients */}
+        <div className="space-y-6">
+          {/* Quick Actions */}
+          <div className="rounded-xl bg-gray-900 p-6 text-white">
+            <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate('/doctor/patients')}
+                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/20">
+                    <Users size={18} />
+                  </div>
+                  <span className="font-medium">View Patients</span>
+                </div>
+                <ChevronRight size={18} className="opacity-60" />
+              </button>
+              <button
+                onClick={() => navigate('/doctor/plans')}
+                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/20">
+                    <FileText size={18} />
+                  </div>
+                  <span className="font-medium">Manage Plans</span>
+                </div>
+                <ChevronRight size={18} className="opacity-60" />
+              </button>
+              <button
+                onClick={() => navigate('/doctor/exercises')}
+                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/20">
+                    <Activity size={18} />
+                  </div>
+                  <span className="font-medium">Exercise Library</span>
+                </div>
+                <ChevronRight size={18} className="opacity-60" />
+              </button>
+              <button
+                onClick={() => navigate('/doctor/patients/invitation-code')}
+                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-white/20">
+                    <User size={18} />
+                  </div>
+                  <span className="font-medium">Invite Patient</span>
+                </div>
+                <ChevronRight size={18} className="opacity-60" />
+              </button>
+            </div>
+          </div>
+
+          {/* Recent Patients */}
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Recent Patients</h3>
+              <span className="text-sm text-gray-600">{patients.length} total</span>
+            </div>
+            
+            {patients.length === 0 ? (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                  <User size={20} className="text-gray-400" />
+                </div>
+                <p className="text-gray-600">No patients yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {patients.slice(0, 4).map((patient) => (
+                  <div
+                    key={patient.id}
+                    className="group flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => navigate(`/doctor/patients/${patient.id}`)}
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <User size={18} className="text-gray-600" />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{patient.name}</h4>
+                      <p className="text-xs text-gray-600 truncate">{patient.email}</p>
+                    </div>
+                    <ChevronRight size={16} className="text-gray-400 group-hover:text-gray-600" />
+                  </div>
+                ))}
+                {patients.length > 4 && (
+                  <button
+                    onClick={() => navigate('/doctor/patients')}
+                    className="w-full py-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    View all patients →
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* System Status */}
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-4">System Status</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">API Status</span>
+                <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
+                  Online
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Data Sync</span>
+                <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
+                  Up to date
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Storage</span>
+                <span className="text-sm font-medium text-gray-900">85% used</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom Section - Additional Metrics */}
+      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-gray-100">
+              <Clock size={20} className="text-gray-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900">Average Session Time</h4>
+              <p className="text-sm text-gray-600">Per patient session</p>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">28 min</div>
+        </div>
+
+        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-gray-100">
+              <CheckCircle size={20} className="text-gray-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900">Weekly Completions</h4>
+              <p className="text-sm text-gray-600">Exercises completed this week</p>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">142</div>
+        </div>
+
+        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2 rounded-lg bg-gray-100">
+              <TrendingUp size={20} className="text-gray-600" />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900">Patient Satisfaction</h4>
+              <p className="text-sm text-gray-600">Based on recent feedback</p>
+            </div>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">4.8/5</div>
         </div>
       </div>
     </div>

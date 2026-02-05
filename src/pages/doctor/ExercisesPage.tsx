@@ -1,110 +1,305 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getAllExercises } from '../../services/api/exercises.api';
 import type { Exercise } from '../../services/api/exercises.api';
+import { motion } from 'framer-motion';
+import { Search, Filter, Plus, Play, Heart } from 'lucide-react';
 
 export function ExercisesPage() {
-	const { user } = useAuth();
-	const navigate = useNavigate();
-	const [exercises, setExercises] = useState<Exercise[]>([]);
-	const [isLoading, setIsLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const [exercises, setExercises] = useState<Exercise[]>([]);
+  const [filteredExercises, setFilteredExercises] = useState<Exercise[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [favorites, setFavorites] = useState<number[]>([]);
 
-	const baseUrl = 'http://localhost:5246';
+  const baseUrl = 'http://localhost:5246';
 
-const getImageSrc = (url?: string) => {
-  if (!url) return undefined;
-  if (url.startsWith('http')) return url;
-  return `${baseUrl}${url.startsWith('/') ? url : `/${url}`}`;
-};
+  const getImageSrc = (url?: string) => {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+    return `${baseUrl}${url.startsWith('/') ? url : `/${url}`}`;
+  };
 
+  useEffect(() => {
+    if (user?.id && user?.role === 'doctor') loadExercises();
+  }, [user]);
 
-	useEffect(() => {
-		if (user?.id && user?.role === 'doctor') loadExercises();
-	}, [user]);
+  useEffect(() => {
+    let results = exercises;
+    
+    if (searchTerm) {
+      results = results.filter(exercise =>
+        exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        exercise.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    if (selectedCategory !== 'all') {
+      results = results.filter(exercise => exercise.difficulty === selectedCategory);
+    }
+    
+    setFilteredExercises(results);
+  }, [exercises, searchTerm, selectedCategory]);
 
-	const loadExercises = async () => {
-		setIsLoading(true);
-		setError(null);
-		try {
-			const data = await getAllExercises();
-			setExercises(data);
-		} catch (err) {
-			console.error(err);
-			setError('Failed to load exercises');
-		} finally {
-			setIsLoading(false);
-		}
-	};
+  const loadExercises = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await getAllExercises();
+      setExercises(data);
+      setFilteredExercises(data);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to load exercises');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-	if (isLoading) return <div className="min-h-screen px-4 py-10">Loading exercises...</div>;
+  const categories = [
+    { id: 'all', label: 'All Exercises' },
+    { id: 'beginner', label: 'Beginner' },
+    { id: 'intermediate', label: 'Intermediate' },
+    { id: 'advanced', label: 'Advanced' },
+  ];
 
-	return (
-		<div className="min-h-screen bg-slate-50 px-4 py-10">
-			<div className="mx-auto max-w-7xl">
-				<div className="mb-8 flex items-center justify-between">
-					<div>
-						<h1 className="text-3xl font-semibold tracking-tight">Exercises</h1>
-						<p className="mt-1 text-sm text-slate-600">Browse available exercises (read-only)</p>
-					</div>
-					<button
-						onClick={() => navigate('/doctor')}
-						className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
-					>
-						Back to Dashboard
-					</button>
-				</div>
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.05
+      }
+    }
+  };
 
-				{error && (
-					<div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
-				)}
+  const item = {
+    hidden: { opacity: 0, scale: 0.9 },
+    show: { opacity: 1, scale: 1 }
+  };
 
-				<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					{exercises.map((exercise) => (
-						<div key={exercise.id} className="group relative overflow-hidden rounded-lg border border-slate-200 bg-white shadow-md transition-all hover:shadow-lg">
-							<div className="relative h-48 w-full overflow-hidden bg-slate-100">
-								{exercise.imageUrl ? (
-									<img src={getImageSrc(exercise.imageUrl)} alt={exercise.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-								) : exercise.assetUrl ? (
-									<img src={getImageSrc(exercise.assetUrl)} alt={exercise.name} className="h-full w-full object-cover transition-transform group-hover:scale-105" />
-								) : (
-									<div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-slate-200 to-slate-300">
-										<svg className="h-16 w-16 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-										</svg>
-									</div>
-								)}
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="h-12 w-64 bg-gradient-to-r from-slate-200 to-slate-300 rounded-xl animate-pulse" />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="h-80 bg-gradient-to-r from-slate-200 to-slate-300 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-								<div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 transition-opacity group-hover:opacity-100">
-									<div className="text-sm text-white">
-										<div className="font-semibold">{exercise.name}</div>
-										{exercise.description && <div className="mt-1 text-xs">{exercise.description}</div>}
-									</div>
-								</div>
-							</div>
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+          Exercise Library
+        </h1>
+        <p className="mt-2 text-slate-600">Browse and manage therapy exercises for your patients</p>
+      </div>
 
-							<div className="p-4">
-								<h3 className="line-clamp-2 text-sm font-semibold text-slate-900">{exercise.name}</h3>
-								{exercise.difficulty && <span className="mt-3 inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">{exercise.difficulty}</span>}
-							</div>
-						</div>
-					))}
+      {error && (
+        <div className="mb-6 rounded-2xl bg-gradient-to-r from-rose-50 to-pink-50 border border-rose-200 p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
+              <span className="text-rose-600">⚠️</span>
+            </div>
+            <div>
+              <p className="font-medium text-rose-900">{error}</p>
+              <button 
+                onClick={loadExercises}
+                className="text-sm text-rose-600 hover:text-rose-800 mt-1"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-					<div className="flex items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-white p-8">
-						<div className="text-center">
-							<svg className="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m0 0h6m-6-6h6m0 0h6" />
-							</svg>
-							<h3 className="mt-4 text-sm font-semibold text-slate-900">More Exercises Coming Soon</h3>
-							<p className="mt-2 text-xs text-slate-600">We're continuously adding new exercises to enhance your therapy programs.</p>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-	);
+      {/* Search and Filter Bar */}
+      <div className="mb-8 space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search exercises..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-xl border border-slate-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+            />
+          </div>
+          <button className="flex items-center gap-2 px-4 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 transition-colors">
+            <Filter size={18} />
+            <span>Filters</span>
+          </button>
+          <button className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:shadow-lg transition-all">
+            <Plus size={18} />
+            <span>Add Exercise</span>
+          </button>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                selectedCategory === category.id
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
+                  : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              {category.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Exercise Grid */}
+      <motion.div
+        variants={container}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+      >
+        {filteredExercises.map((exercise) => (
+          <motion.div
+            key={exercise.id}
+            variants={item}
+            whileHover={{ y: -8, transition: { duration: 0.2 } }}
+            className="group relative overflow-hidden rounded-2xl bg-white shadow-lg border border-slate-200/60 hover:shadow-2xl transition-all duration-300"
+          >
+            {/* Favorite Button */}
+            <button
+              onClick={() => {
+                setFavorites(prev =>
+                  prev.includes(exercise.id)
+                    ? prev.filter(id => id !== exercise.id)
+                    : [...prev, exercise.id]
+                );
+              }}
+              className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+            >
+              <Heart
+                size={18}
+                className={`${
+                  favorites.includes(exercise.id)
+                    ? 'fill-rose-500 text-rose-500'
+                    : 'text-slate-400'
+                }`}
+              />
+            </button>
+
+            {/* Image Container */}
+            <div className="relative h-48 w-full overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200">
+              {exercise.imageUrl || exercise.assetUrl ? (
+                <img
+                  src={getImageSrc(exercise.imageUrl || exercise.assetUrl)}
+                  alt={exercise.name}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-200 to-purple-200 flex items-center justify-center">
+                    <Play size={32} className="text-blue-500" />
+                  </div>
+                </div>
+              )}
+
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              {/* Difficulty Badge */}
+              {exercise.difficulty && (
+                <span className={`absolute top-4 left-4 px-3 py-1 rounded-full text-xs font-semibold ${
+                  exercise.difficulty === 'beginner'
+                    ? 'bg-emerald-500 text-white'
+                    : exercise.difficulty === 'intermediate'
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-rose-500 text-white'
+                }`}>
+                  {exercise.difficulty}
+                </span>
+              )}
+            </div>
+
+            {/* Content */}
+            <div className="p-5">
+              <h3 className="font-bold text-slate-900 line-clamp-2 mb-2">
+                {exercise.name}
+              </h3>
+              {exercise.description && (
+                <p className="text-sm text-slate-600 line-clamp-2 mb-4">
+                  {exercise.description}
+                </p>
+              )}
+
+              {/* Tags */}
+              <div className="flex flex-wrap gap-2">
+                {exercise.difficulty && (
+                  <span className="px-2 py-1 text-xs rounded-lg bg-slate-100 text-slate-700">
+                    {exercise.difficulty}
+                  </span>
+                )}
+                <span className="px-2 py-1 text-xs rounded-lg bg-blue-100 text-blue-700">
+                  Therapy
+                </span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-4 flex gap-2">
+                <button className="flex-1 py-2 rounded-lg bg-slate-100 text-slate-700 font-medium hover:bg-slate-200 transition-colors text-sm">
+                  Preview
+                </button>
+                <button className="flex-1 py-2 rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:shadow-lg transition-all text-sm">
+                  Assign
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+
+        {/* Add New Exercise Card */}
+        <motion.div
+          variants={item}
+          whileHover={{ scale: 1.02 }}
+          className="group flex items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50/50 p-8 hover:border-blue-300 hover:bg-blue-50/20 transition-all duration-300 cursor-pointer"
+        >
+          <div className="text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center group-hover:from-blue-200 group-hover:to-purple-200 transition-all">
+              <Plus size={28} className="text-blue-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">Add Custom Exercise</h3>
+            <p className="text-sm text-slate-600">Create a personalized exercise for your patients</p>
+          </div>
+        </motion.div>
+      </motion.div>
+
+      {/* Empty State */}
+      {filteredExercises.length === 0 && (
+        <div className="text-center py-16">
+          <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-r from-slate-200 to-slate-300 rounded-full flex items-center justify-center">
+            <Search size={32} className="text-slate-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-slate-900 mb-2">No exercises found</h3>
+          <p className="text-slate-600 max-w-md mx-auto">
+            Try adjusting your search or filter criteria to find what you're looking for.
+          </p>
+        </div>
+      )}
+    </motion.div>
+  );
 }
-
-export default ExercisesPage;
-

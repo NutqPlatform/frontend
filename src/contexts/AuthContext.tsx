@@ -50,7 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(AUTH_TOKEN_KEY, result.token);
       localStorage.setItem(USER_KEY, JSON.stringify(userData));
     } catch (error) {
-      // Re-throw to let the caller handle it
       throw error;
     }
   };
@@ -71,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(AUTH_TOKEN_KEY, result.token);
       localStorage.setItem(USER_KEY, JSON.stringify(userData));
     } catch (error) {
-      // Re-throw to let the caller handle it
       throw error;
     }
   };

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { PublicOnlyRoute } from './routes/PublicOnlyRoute';
+import { MainLayout } from './components/layouts/MainLayout';
 import { LoginPage } from './pages/auth/LoginPage';
 import { RegisterPage } from './pages/auth/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -10,7 +11,6 @@ import { PatientProfilePage } from './pages/patient/PatientProfilePage';
 import { PatientPlansPage } from './pages/patient/PatientPlansPage';
 import { PatientReportsPage } from './pages/patient/PatientReportsPage';
 import { PronounceWordExercisePage } from './pages/patient/PronounceWordExercisePage';
-import { PatientStatisticsPage } from './pages/patient/PatientStatisticsPage';
 import { PatientsListPage } from './pages/doctor/PatientsListPage';
 import { PatientDetailPage } from './pages/doctor/PatientDetailPage';
 import { InvitationCodePage } from './pages/doctor/InvitationCodePage';
@@ -45,7 +45,9 @@ function App() {
             path="/dashboard"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <MainLayout>
+                  <DashboardPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -53,7 +55,9 @@ function App() {
             path="/doctor"
             element={
               <ProtectedRoute>
-                <DoctorDashboard />
+                <MainLayout>
+                  <DoctorDashboard />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -61,7 +65,9 @@ function App() {
             path="/doctor/patients"
             element={
               <ProtectedRoute>
-                <PatientsListPage />
+                <MainLayout>
+                  <PatientsListPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -69,7 +75,9 @@ function App() {
             path="/doctor/patients/:id"
             element={
               <ProtectedRoute>
-                <PatientDetailPage />
+                <MainLayout>
+                  <PatientDetailPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -77,7 +85,9 @@ function App() {
             path="/doctor/patients/invitation-code"
             element={
               <ProtectedRoute>
-                <InvitationCodePage />
+                <MainLayout>
+                  <InvitationCodePage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -85,7 +95,9 @@ function App() {
             path="/doctor/profile"
             element={
               <ProtectedRoute>
-                <DoctorProfilePage />
+                <MainLayout>
+                  <DoctorProfilePage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -93,7 +105,9 @@ function App() {
             path="/doctor/plans"
             element={
               <ProtectedRoute>
-                <PlansPage />
+                <MainLayout>
+                  <PlansPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -102,7 +116,9 @@ function App() {
             path="/doctor/exercises"
             element={
               <ProtectedRoute>
-                <ExercisesPage />
+                <MainLayout>
+                  <ExercisesPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -111,7 +127,9 @@ function App() {
             path="/doctor/statistics"
             element={
               <ProtectedRoute>
-                <StatisticsPage />
+                <MainLayout>
+                  <StatisticsPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -119,7 +137,9 @@ function App() {
             path="/patient/profile"
             element={
               <ProtectedRoute>
-                <PatientProfilePage />
+                <MainLayout>
+                  <PatientProfilePage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -127,7 +147,9 @@ function App() {
             path="/patient/plans"
             element={
               <ProtectedRoute>
-                <PatientPlansPage />
+                <MainLayout>
+                  <PatientPlansPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -135,7 +157,9 @@ function App() {
             path="/patient/reports"
             element={
               <ProtectedRoute>
-                <PatientReportsPage />
+                <MainLayout>
+                  <PatientReportsPage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />
@@ -143,15 +167,9 @@ function App() {
             path="/patient/exercise/:planId/:planExerciseId"
             element={
               <ProtectedRoute>
-                <PronounceWordExercisePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/patient/statistics"
-            element={
-              <ProtectedRoute>
-                <PatientStatisticsPage />
+                <MainLayout>
+                  <PronounceWordExercisePage />
+                </MainLayout>
               </ProtectedRoute>
             }
           />

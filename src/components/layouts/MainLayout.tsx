@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { 
   Menu, X, Home, Users, FileText, Activity, 
   User, LogOut, Bell, Settings, BarChart3,
-  Dumbbell, Calendar
+  Dumbbell
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -16,15 +16,13 @@ export function MainLayout({ children }: MainLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [notifications] = useState(3); // Removed setter since it's not used
+
 
   const doctorNavItems = [
     { label: 'Dashboard', icon: <Home size={20} />, path: '/doctor', roles: ['doctor'] },
     { label: 'Patients', icon: <Users size={20} />, path: '/doctor/patients', roles: ['doctor'] },
     { label: 'Plans', icon: <FileText size={20} />, path: '/doctor/plans', roles: ['doctor'] },
     { label: 'Exercises', icon: <Dumbbell size={20} />, path: '/doctor/exercises', roles: ['doctor'] },
-    { label: 'Statistics', icon: <BarChart3 size={20} />, path: '/doctor/statistics', roles: ['doctor'] },
-    { label: 'Calendar', icon: <Calendar size={20} />, path: '/doctor/calendar', roles: ['doctor'] },
     { label: 'Profile', icon: <User size={20} />, path: '/doctor/profile', roles: ['doctor'] },
   ];
 
@@ -137,33 +135,12 @@ export function MainLayout({ children }: MainLayoutProps) {
 
         {/* Bottom Actions */}
         <div className="absolute bottom-0 left-0 right-0 p-6 space-y-4">
-          {/* Notifications */}
-          <button className="flex items-center justify-between w-full p-4 rounded-xl bg-gradient-to-r from-amber-50 to-orange-50/50 border border-amber-200/60 hover:bg-amber-100/50 transition-colors">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/20">
-                <Bell size={18} className="text-amber-600" />
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-medium text-slate-900">Notifications</p>
-                <p className="text-xs text-slate-600">{notifications} unread</p>
-              </div>
-            </div>
-            {notifications > 0 && (
-              <span className="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center animate-pulse">
-                {notifications}
-              </span>
-            )}
-          </button>
+         
+          
 
           {/* Settings & Logout */}
           <div className="flex gap-2">
-            <button 
-              onClick={() => navigate('/settings')}
-              className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-            >
-              <Settings size={18} />
-              <span className="text-sm font-medium">Settings</span>
-            </button>
+            
             <button
               onClick={() => {
                 logout();

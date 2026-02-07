@@ -61,9 +61,8 @@ export function ExercisesPage() {
 
   const categories = [
     { id: 'all', label: 'All Exercises' },
-    { id: 'beginner', label: 'Beginner' },
-    { id: 'intermediate', label: 'Intermediate' },
-    { id: 'advanced', label: 'Advanced' },
+   
+  
   ];
 
   const container = {
@@ -144,10 +143,7 @@ export function ExercisesPage() {
             <Filter size={18} />
             <span>Filters</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white font-medium hover:shadow-lg transition-all">
-            <Plus size={18} />
-            <span>Add Exercise</span>
-          </button>
+         
         </div>
 
         {/* Category Tabs */}
@@ -272,20 +268,7 @@ export function ExercisesPage() {
           </motion.div>
         ))}
 
-        {/* Add New Exercise Card */}
-        <motion.div
-          variants={item}
-          whileHover={{ scale: 1.02 }}
-          className="group flex items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-gradient-to-b from-white to-slate-50/50 p-8 hover:border-blue-300 hover:bg-blue-50/20 transition-all duration-300 cursor-pointer"
-        >
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-blue-100 to-purple-100 flex items-center justify-center group-hover:from-blue-200 group-hover:to-purple-200 transition-all">
-              <Plus size={28} className="text-blue-500" />
-            </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">Add Custom Exercise</h3>
-            <p className="text-sm text-slate-600">Create a personalized exercise for your patients</p>
-          </div>
-        </motion.div>
+        
       </motion.div>
 
       {/* Empty State */}

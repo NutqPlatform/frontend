@@ -8,7 +8,7 @@ import {
   getAttendingDoctor,
 } from '../../services/api/patient.api';
 import type { PatientProfile, AttendingDoctor } from '../../services/api/patient.api';
-import { User, Mail, Calendar, Stethoscope, Camera, Lock, Shield, Info, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Mail, Calendar, Stethoscope, Camera, Lock, Shield, Info, AlertCircle, CheckCircle, Users, FileText } from 'lucide-react';
 
 export function PatientProfilePage() {
   const { user } = useAuth();
@@ -31,6 +31,10 @@ export function PatientProfilePage() {
     confirmPassword: '',
   });
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  // Communication data
+  const [peerPatients, setPeerPatients] = useState<any[]>([]);
+  const [myReports, setMyReports] = useState<any[]>([]);
 
   useEffect(() => {
     if (user?.role && user.role !== 'patient') {
@@ -56,6 +60,15 @@ export function PatientProfilePage() {
       setProfile(profileData);
       setDoctor(doctorData);
       setPhotoPreview(profileData.profilePicture || null);
+      
+      // Extract peer patients and personal reports
+      if (doctorData?.patients) {
+        setPeerPatients(doctorData.patients.filter((p: any) => p.id !== user.id));
+      }
+      if (doctorData?.weeklyReports) {
+        const myReports = doctorData.weeklyReports.filter((r: any) => r.patientId === user.id);
+        setMyReports(myReports);
+      }
     } catch (err: any) {
       setError(err?.response?.data?.error || err?.message || 'Failed to load profile');
     } finally {
@@ -516,9 +529,168 @@ export function PatientProfilePage() {
                   </p>
                   <button
                     onClick={() => navigate('/patient/reports')}
-                    className="w-full py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                    className="w-full mb-2 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
                   >
                     View Reports
+                  </button>
+                  <button
+                    onClick={() => navigate('/doctors')}
+                    className="w-full py-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 font-medium hover:bg-blue-100 transition-colors"
+                  >
+                    See All Doctors & Communications
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+            {/* Peer Patients */}
+            {peerPatients && peerPatients.length > 0 && (
+              <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <Users size={20} className="text-purple-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Peer Patients</h3>
+                </div>
+
+                <p className="text-sm text-gray-600 mb-3">
+                  Patients with {doctor?.name ?? 'your physician'}:
+                </p>
+
+                <ul className="space-y-2">
+                  {peerPatients.map((patient: any) => (
+                    <li
+                      key={patient.id}
+                      className="flex items-center gap-3 rounded-lg border border-gray-100 p-3"
+                    >
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-100">
+                        {patient.profilePicture ? (
+                          <img
+                            src={patient.profilePicture}
+                            alt={patient.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <User className="w-5 h-5 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{patient.name}</p>
+                        <p className="text-xs text-gray-500">{patient.email}</p>
+                      </div>
+                      <span className="text-xs text-gray-500">Age: {patient.age ?? '—'}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* My Communication Reports */}
+            {myReports && myReports.length > 0 && (
+              <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                    <FileText size={20} className="text-green-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-900">Communication Reports</h3>
+                </div>
+
+                <ul className="space-y-3">
+                  {myReports.map((report: any) => (
+                    <li key={report.id} className="rounded-lg border border-gray-100 p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <p className="text-xs text-gray-500">
+                            {new Date(report.startDate).toLocaleDateString()} - {new Date(report.endDate).toLocaleDateString()}
+                          </p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {report.totalHours} hours tracked
+                          </p>
+                        </div>
+                      </div>
+                      {report.aiSummary && (
+                        <p className="text-sm text-gray-700">{report.aiSummary}</p>
+                      )}
+                      {report.doctorNotes && (
+                        <p className="text-sm text-gray-600 mt-2">
+                          <span className="font-medium">Doctor's Note:</span> {report.doctorNotes}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+        {/* Doctor Information Sidebar */}
+        <div className="space-y-6">
+          {/* Attending Physician */}
+          <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                <Stethoscope size={20} className="text-gray-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900">Attending Physician</h3>
+            </div>
+
+            {!doctor ? (
+              <div className="text-center py-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <User size={24} className="text-gray-400" />
+                </div>
+                <p className="text-gray-600">No attending physician assigned</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
+                    {doctor.profilePicture ? (
+                      <img
+                        src={doctor.profilePicture}
+                        alt={doctor.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900">{doctor.name}</h4>
+                    <p className="text-sm text-gray-600">{doctor.email}</p>
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                      Physician
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Contact:</span>
+                    <span className="font-medium text-gray-900">{doctor.email}</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-gray-200">
+                  <p className="text-xs text-gray-500 mb-2">
+                    Contact your physician to update personal information
+                  </p>
+                  <button
+                    onClick={() => navigate('/patient/reports')}
+                    className="w-full mb-2 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    View Reports
+                  </button>
+                  <button
+                    onClick={() => navigate('/doctors')}
+                    className="w-full py-2.5 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 font-medium hover:bg-blue-100 transition-colors"
+                  >
+                    See All Doctors & Communications
                   </button>
                 </div>
               </div>

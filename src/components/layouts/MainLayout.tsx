@@ -3,8 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { 
   Menu, X, Home, Users, FileText, Activity, 
-  User, LogOut, Bell, Settings, BarChart3,
-  Dumbbell
+  User, LogOut, Dumbbell
 } from 'lucide-react';
 
 interface MainLayoutProps {
@@ -20,6 +19,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
   const doctorNavItems = [
     { label: 'Dashboard', icon: <Home size={20} />, path: '/doctor', roles: ['doctor'] },
+    { label: 'Doctors', icon: <Users size={20} />, path: '/doctors', roles: ['doctor'] },
     { label: 'Patients', icon: <Users size={20} />, path: '/doctor/patients', roles: ['doctor'] },
     { label: 'Plans', icon: <FileText size={20} />, path: '/doctor/plans', roles: ['doctor'] },
     { label: 'Exercises', icon: <Dumbbell size={20} />, path: '/doctor/exercises', roles: ['doctor'] },

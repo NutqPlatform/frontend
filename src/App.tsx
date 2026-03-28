@@ -18,6 +18,8 @@ import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
 import { PlansPage } from './pages/doctor/PlansPage';
 import { ExercisesPage } from './pages/doctor/ExercisesPage';
 import { StatisticsPage } from './pages/doctor/StatisticsPage';
+import { DoctorsPage } from './pages/DoctorsPage';
+import { DoctorDetailPage } from './pages/DoctorDetailPage';
 
 function App() {
   return (
@@ -129,6 +131,26 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <StatisticsPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctors"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <DoctorsPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctors/:id"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <DoctorDetailPage />
                 </MainLayout>
               </ProtectedRoute>
             }

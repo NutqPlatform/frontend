@@ -10,12 +10,33 @@ export interface PatientProfile {
   doctorId?: number;
 }
 
+export interface DoctorPatient {
+  id: number;
+  name: string;
+  email: string;
+  age?: number;
+  profilePicture?: string;
+}
+
+export interface DoctorWeeklyReport {
+  id: number;
+  patientId: number;
+  patientName?: string;
+  startDate: string;
+  endDate: string;
+  totalHours: number;
+  doctorNotes?: string;
+  aiSummary?: string;
+}
+
 export interface AttendingDoctor {
   id: number;
   name: string;
   email: string;
   profilePicture?: string;
   cv?: string;
+  patients?: DoctorPatient[];
+  weeklyReports?: DoctorWeeklyReport[];
 }
 
 export async function getPatientProfile(patientId: number): Promise<PatientProfile> {

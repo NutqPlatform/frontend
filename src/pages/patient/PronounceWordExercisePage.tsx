@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import {
+  getPlanExercises,
   getExerciseVocabulary,
   startExercise as apiStartExercise,
   completeExercise as apiCompleteExercise,
@@ -11,13 +12,15 @@ import {
   type VocabularyDto,
   type ExerciseState,
   type ExerciseProgressDto,
+  type PlanExerciseDto,
 } from '../../services/api/patient-exercises.api';
 import {
   ExerciseStateBadge,
   ExerciseActions,
+  PhotoFrameExercise,
+  CardMatchExercise,
 } from '../../components/exercises';
-import { PhotoFrameExercise } from '../../components/exercises/PhotoFrameExercise';
-import { Target, Trophy, Sparkles, Star, Heart } from 'lucide-react';
+import { Target, Sparkles, Star, Heart } from 'lucide-react';
 
 const EXERCISE_NAME = 'Word Adventure! 🎯';
 
@@ -30,6 +33,7 @@ export function PronounceWordExercisePage() {
   }>();
 
   const [vocabulary, setVocabulary] = useState<VocabularyDto[]>([]);
+  const [planExercise, setPlanExercise] = useState<PlanExerciseDto | null>(null);
   const [exerciseState, setExerciseState] = useState<ExerciseState>('not_started');
   const [currentProgress, setCurrentProgress] = useState<ExerciseProgressDto | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,6 +41,11 @@ export function PronounceWordExercisePage() {
   const [isStarting, setIsStarting] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [lastCompletedRepetition, setLastCompletedRepetition] = useState<number | null>(null);
+
+  const isCardMatchGame =
+    planExercise?.exercise?.category?.toLowerCase() === 'tools' ||
+    planExercise?.exercise?.name?.toLowerCase().includes('match');
 
   const planIdNum = parseInt(planId ?? '0', 10);
   const planExerciseIdNum = parseInt(planExerciseId ?? '0', 10);
@@ -51,20 +60,29 @@ export function PronounceWordExercisePage() {
     setIsLoading(true);
     setError(null);
     try {
-      const [vocabList, progressList] = await Promise.all([
+      const [vocabList, progressList, planExercises] = await Promise.all([
         getExerciseVocabulary(user.id, planExerciseIdNum),
         getPatientProgress(user.id),
+        getPlanExercises(user.id, planIdNum),
       ]);
+
+      const selectedExercise = planExercises.find((exercise) => exercise.id === planExerciseIdNum) || null;
+      if (!selectedExercise) {
+        throw new Error('Exercise not found in this therapy plan.');
+      }
+
       setVocabulary(vocabList);
+      setPlanExercise(selectedExercise);
       setExerciseState(deriveExerciseState(progressList, planExerciseIdNum));
-      
-      // Find current progress for this exercise
+
       const progress = progressList.find((p) => p.planExerciseId === planExerciseIdNum);
       if (progress) {
         setCurrentProgress(progress);
+      } else {
+        setCurrentProgress(null);
       }
-    } catch (err) {
-      setError('Failed to load exercise. Please try again.');
+    } catch (err: any) {
+      setError(err?.message ? String(err.message) : 'Failed to load exercise. Please try again.');
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -108,9 +126,12 @@ const handleStart = async () => {
   }
 };
   const handleCompleteRepetition = async () => {
-    if (!user?.id || !planExerciseIdNum) return;
+    if (!user?.id || !planExerciseIdNum || !currentProgress) return;
+    const completedRepetition = currentProgress.currentRepetition;
     try {
       await apiCompleteRepetition(user.id, planExerciseIdNum);
+      setLastCompletedRepetition(completedRepetition);
+      setShowCelebration(true);
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to complete repetition');
@@ -135,8 +156,9 @@ const handleStart = async () => {
   };
 
   const handlePracticeAgain = () => {
-    setExerciseState('not_started');
     setShowCelebration(false);
+    setLastCompletedRepetition(null);
+    navigate('/patient/plans');
   };
 
   if (isLoading) {
@@ -171,7 +193,20 @@ const handleStart = async () => {
 
   // Show celebration screen
   if (showCelebration || exerciseState === 'completed') {
-    return (
+    const celebrationRepetition =
+      lastCompletedRepetition ?? currentProgress?.currentRepetition ?? 1;
+
+    return isCardMatchGame ? (
+      <CardMatchExercise
+        vocabulary={vocabulary}
+        currentRepetition={celebrationRepetition}
+        totalRepetitions={currentProgress?.totalRepetitions || 1}
+        onRepetitionComplete={handleCompleteRepetition}
+        onExerciseComplete={handleComplete}
+        isCompleted={true}
+        onPracticeAgain={handlePracticeAgain}
+      />
+    ) : (
       <PhotoFrameExercise
         vocabulary={vocabulary}
         currentRepetition={currentProgress?.currentRepetition || 1}
@@ -186,7 +221,15 @@ const handleStart = async () => {
 
   // Show exercise frame when started
   if (exerciseState === 'started' && currentProgress && vocabulary.length > 0) {
-    return (
+    return isCardMatchGame ? (
+      <CardMatchExercise
+        vocabulary={vocabulary}
+        currentRepetition={currentProgress.currentRepetition}
+        totalRepetitions={currentProgress.totalRepetitions}
+        onRepetitionComplete={handleCompleteRepetition}
+        onExerciseComplete={handleComplete}
+      />
+    ) : (
       <PhotoFrameExercise
         vocabulary={vocabulary}
         currentRepetition={currentProgress.currentRepetition}
@@ -210,9 +253,13 @@ const handleStart = async () => {
             </div>
           </div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            {EXERCISE_NAME}
+            {planExercise?.exercise?.name ?? EXERCISE_NAME}
           </h1>
-          <p className="mt-2 text-lg text-gray-600">Learn words in a fun way! 🎮</p>
+          <p className="mt-2 text-lg text-gray-600">
+            {isCardMatchGame
+              ? 'Listen to the sound and pick the correct tool card. Each repetition is a new match with random cards.'
+              : 'Learn words in a fun way! 🎮'}
+          </p>
         </div>
 
         {/* Status Badge */}

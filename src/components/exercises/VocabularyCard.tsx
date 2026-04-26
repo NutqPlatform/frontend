@@ -14,10 +14,17 @@ export function VocabularyCard({ word, index, isCompleted = false }: VocabularyC
 
   const baseUrl = 'http://localhost:5246';
 
-  const handlePlay = () => {
-    if (!word.soundUrl) return;
+  const getAssetUrl = (url?: string) => {
+    if (!url) return undefined;
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${encodeURI(path)}`;
+  };
 
-    const audio = new Audio(`${baseUrl}${word.soundUrl}`);
+  const handlePlay = () => {
+    const audioUrl = getAssetUrl(word.soundUrl);
+    if (!audioUrl) return;
+
+    const audio = new Audio(audioUrl);
     setIsPlaying(true);
     audio.play();
     audio.onended = () => setIsPlaying(false);
@@ -45,7 +52,7 @@ export function VocabularyCard({ word, index, isCompleted = false }: VocabularyC
       <div className="relative aspect-square overflow-hidden">
         {word.imageUrl ? (
           <img
-            src={`${baseUrl}${word.imageUrl}`}
+            src={getAssetUrl(word.imageUrl)}
             alt={word.wordEnglish}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />

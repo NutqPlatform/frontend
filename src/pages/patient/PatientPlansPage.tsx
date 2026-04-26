@@ -299,14 +299,12 @@ export function PatientPlansPage() {
                           </div>
                         )}
                         
-                        {ex.exerciseName === 'Pronounce one word' && (
-                          <button
-                            onClick={() => navigate(`/patient/exercise/${plan.planId}/${ex.planExerciseId}`)}
-                            className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"
-                          >
-                            {ex.completed ? 'Review Exercise' : 'Start Practice'}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => navigate(`/patient/exercise/${plan.planId}/${ex.planExerciseId}`)}
+                          className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"
+                        >
+                          {ex.completed ? 'Review Exercise' : 'Start Practice'}
+                        </button>
                       </div>
                     ))}
                   </div>

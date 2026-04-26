@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { getAllExercises } from '../../services/api/exercises.api';
 import type { Exercise } from '../../services/api/exercises.api';
 import { motion } from 'framer-motion';
-import { Search, Filter, Plus, Play, Heart } from 'lucide-react';
+import { Search, Filter, Play, Heart } from 'lucide-react';
 
 export function ExercisesPage() {
   const { user } = useAuth();
@@ -20,7 +20,8 @@ export function ExercisesPage() {
   const getImageSrc = (url?: string) => {
     if (!url) return undefined;
     if (url.startsWith('http')) return url;
-    return `${baseUrl}${url.startsWith('/') ? url : `/${url}`}`;
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${encodeURI(path)}`;
   };
 
   useEffect(() => {

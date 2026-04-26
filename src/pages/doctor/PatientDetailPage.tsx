@@ -77,7 +77,10 @@ export function PatientDetailPage() {
           getPatientPlans(user.id, patientId),
           getAllExercises(),
         ]);
-        setPlans(plansData);
+        const sortedPlans = [...plansData].sort(
+          (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+        );
+        setPlans(sortedPlans);
         setAvailableExercises(exercisesData);
         
         const progressPromises = plansData.map(async (plan) => {
@@ -145,7 +148,7 @@ export function PatientDetailPage() {
         startDate: new Date(planForm.startDate),
         endDate: planForm.endDate ? new Date(planForm.endDate) : undefined,
       });
-      setPlans([...plans, newPlan]);
+      setPlans([newPlan, ...plans]);
       setShowAddPlanForm(false);
       setPlanForm({
         description: '',

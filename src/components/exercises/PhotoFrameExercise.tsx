@@ -30,6 +30,12 @@ export function PhotoFrameExercise({
   const currentWord = vocabulary[currentWordIndex];
   const baseUrl = 'http://localhost:5246';
 
+  const getAssetUrl = (url?: string) => {
+    if (!url) return undefined;
+    const path = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${encodeURI(path)}`;
+  };
+
   // Initialize stars for completed exercise
   useEffect(() => {
     if (isCompleted) {
@@ -41,11 +47,10 @@ export function PhotoFrameExercise({
 
   
 const handlePlay = () => {
-  if (!currentWord?.soundUrl) return;
+    const audioUrl = getAssetUrl(currentWord?.soundUrl);
+    if (!audioUrl) return;
 
-  try {
-    const audioUrl = `${baseUrl}${currentWord.soundUrl}`;
-    const audio = new Audio(audioUrl);
+    try {
     
     // Preload the audio
     audio.preload = 'auto';
@@ -254,7 +259,7 @@ const handlePlay = () => {
                     {currentWord.imageUrl ? (
                       <div className="overflow-hidden rounded-xl">
                         <img
-                          src={`${baseUrl}${currentWord.imageUrl}`}
+                          src={getAssetUrl(currentWord.imageUrl)}
                           alt={currentWord.wordEnglish}
                           className="w-64 h-64 object-cover rounded-xl transition-transform duration-300 hover:scale-105"
                         />

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { VocabularyDto, WordAttemptData, RepetitionData } from '../../services/api/patient-exercises.api';
-import { Volume2, RefreshCw, CheckCircle, XCircle, Mic, Clock, Target, TrendingUp } from 'lucide-react';
+import { Volume2, CheckCircle, XCircle } from 'lucide-react';
 
 interface CardMatchExerciseProps {
   vocabulary: VocabularyDto[];
   currentRepetition: number;
   totalRepetitions: number;
-  onRepetitionComplete: (sessionData: string) => Promise<void>;
-  onExerciseComplete: (score: number, sessionData: string) => Promise<void>;
+  onRepetitionComplete: (sessionData?: string) => Promise<void>;
+  onExerciseComplete: (score?: number, sessionData?: string) => Promise<void>;
   isCompleted?: boolean;
   onPracticeAgain?: () => void;
   allRepetitionData?: RepetitionData[];
@@ -376,7 +376,6 @@ export function CardMatchExercise({
             const isSelected = selectedCardId === card.id;
             const isCorrectSelected = isSelected && feedbackState === 'correct';
             const isWrongSelected = isSelected && feedbackState === 'wrong';
-            const isTarget = card.id === target?.id;
 
             return (
               <button

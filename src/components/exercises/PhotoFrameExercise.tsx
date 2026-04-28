@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { VocabularyDto, WordAttemptData, RepetitionData } from '../../services/api/patient-exercises.api';
-import { Volume2, ChevronLeft, ChevronRight, CheckCircle, Mic, MicOff } from 'lucide-react';
+import { Volume2, ChevronLeft, ChevronRight, CheckCircle, Mic } from 'lucide-react';
+import { startSpeechRecognition, evaluatePronunciation, isSpeechRecognitionSupported } from '../../utils/speechRecognition';
+import { ExerciseFeedbackSummary } from './ExerciseFeedbackSummary';
 
 interface PhotoFrameExerciseProps {
   vocabulary: VocabularyDto[];
   currentRepetition: number;
   totalRepetitions: number;
-  onRepetitionComplete: (sessionData: string) => Promise<void>;
-  onExerciseComplete: (score: number, sessionData: string) => Promise<void>;
+  onRepetitionComplete: (sessionData?: string) => Promise<void>;
+  onExerciseComplete: (score?: number, sessionData?: string) => Promise<void>;
   isCompleted?: boolean;
   onPracticeAgain?: () => void;
   allRepetitionData?: RepetitionData[];
@@ -35,13 +37,18 @@ export function PhotoFrameExercise({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmedWords, setConfirmedWords] = useState<Set<number>>(new Set());
   const [isRecording, setIsRecording] = useState(false);
-  const [hasRecordingSupport, setHasRecordingSupport] = useState(false);
+  const [speechFeedback, setSpeechFeedback] = useState<{ text: string; accuracy: number; isCorrect: boolean; feedback: string } | null>(null);
+  const [showingFeedback, setShowingFeedback] = useState(false);
+  const [speechSupported, setSpeechSupported] = useState<boolean | null>(null);
+  const [microphoneMuted, setMicrophoneMuted] = useState(true);
+  const [accuracyThreshold] = useState(0.7); // Configurable tolerance (70% by default)
+  const [showDetailedFeedback, setShowDetailedFeedback] = useState(false);
+  const [wordPerformance, setWordPerformance] = useState<Map<number, { attempts: number; successful: boolean }>>(new Map());
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wordStartTimeRef = useRef<number>(Date.now());
   const repStartTimeRef = useRef<number>(Date.now());
   const wordDataRef = useRef<Map<number, WordAttemptData>>(new Map());
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
 
   const currentWord = vocabulary[currentIndex];
   const progress = vocabulary.length > 0 ? ((currentIndex + 1) / vocabulary.length) * 100 : 0;
@@ -49,7 +56,7 @@ export function PhotoFrameExercise({
 
   // Check microphone support
   useEffect(() => {
-    setHasRecordingSupport(!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+    setSpeechSupported(isSpeechRecognitionSupported());
   }, []);
 
   // Init analytics per repetition
@@ -121,19 +128,108 @@ export function PhotoFrameExercise({
     }
   };
 
+  const handleSpeechRecognition = async () => {
+    if (!currentWord || isRecording) return;
+    
+    // Check if speech recognition is supported
+    if (speechSupported === false) {
+      setSpeechFeedback({
+        text: '',
+        accuracy: 0,
+        isCorrect: false,
+        feedback: '❌ Speech Recognition API not supported in this browser. Please use a modern browser like Chrome, Edge, or Safari.',
+      });
+      setShowingFeedback(true);
+      return;
+    }
+    
+    setIsRecording(true);
+    setSpeechFeedback(null);
+    
+    try {
+      const result = await startSpeechRecognition('ar-SA');
+      const feedback = evaluatePronunciation(
+        result.transcript,
+        currentWord.wordEnglish,
+        currentWord.wordArabic,
+        true,
+        accuracyThreshold
+      );
+      
+      setSpeechFeedback({
+        text: feedback.recognized,
+        accuracy: feedback.accuracy,
+        isCorrect: feedback.isCorrect,
+        feedback: feedback.feedback,
+      });
+      setShowingFeedback(true);
+      
+      // Track the attempt
+      const d = wordDataRef.current.get(currentWord.id);
+      if (d) {
+        d.attempts++;
+        if (d.attempts === 1 && feedback.isCorrect) {
+          d.firstTryCorrect = true;
+        } else if (d.attempts > 1) {
+          d.firstTryCorrect = false;
+        }
+        wordDataRef.current.set(currentWord.id, d);
+      }
+
+      // Track word performance for highlighting
+      const perf = wordPerformance.get(currentWord.id) || { attempts: 0, successful: false };
+      perf.attempts++;
+      if (feedback.isCorrect) {
+        perf.successful = true;
+      }
+      const newPerformance = new Map(wordPerformance);
+      newPerformance.set(currentWord.id, perf);
+      setWordPerformance(newPerformance);
+      
+      // Auto-confirm and advance if correct
+      if (feedback.isCorrect) {
+        handleConfirm();
+        setTimeout(() => {
+          // Move to next word automatically
+          if (!isLastWord) {
+            handleNext();
+          } else {
+            // For the last word, show feedback briefly then show completion
+            setShowingFeedback(true);
+          }
+          // Mute microphone after successful pronunciation
+          setMicrophoneMuted(true);
+          setShowingFeedback(false);
+        }, 2000);
+      }
+    } catch (err) {
+      setSpeechFeedback({
+        text: '',
+        accuracy: 0,
+        isCorrect: false,
+        feedback: `❌ ${err instanceof Error ? err.message : 'فشل التعرف على الكلام (Speech recognition failed)'}`,
+      });
+      setShowingFeedback(true);
+    } finally {
+      setIsRecording(false);
+    }
+  };
+
   const handleConfirm = () => {
     if (!currentWord) return;
     recordTimeForWord();
     setConfirmedWords(prev => new Set([...prev, currentWord.id]));
     // Track as practiced
     const d = wordDataRef.current.get(currentWord.id);
-    if (d) { d.attempts = 1; wordDataRef.current.set(currentWord.id, d); }
+    if (d) { d.attempts = Math.max(d.attempts, 1); wordDataRef.current.set(currentWord.id, d); }
   };
 
   const handleNext = () => {
     recordTimeForWord();
     if (currentIndex < vocabulary.length - 1) {
       setCurrentIndex(currentIndex + 1);
+      setMicrophoneMuted(true);
+      setShowingFeedback(false);
     }
   };
 
@@ -141,6 +237,8 @@ export function PhotoFrameExercise({
     recordTimeForWord();
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
+      setMicrophoneMuted(true);
+      setShowingFeedback(false);
     }
   };
 
@@ -180,7 +278,7 @@ export function PhotoFrameExercise({
     }
   };
 
-  // Completion screen
+  // Completion screen - show detailed feedback summary
   if (isCompleted) {
     const allData = allRepetitionData;
     const overallAccuracy = allData.length > 0
@@ -188,6 +286,19 @@ export function PhotoFrameExercise({
       : 100;
     const totalDuration = allData.reduce((s, r) => s + r.durationSeconds, 0);
 
+    if (showDetailedFeedback) {
+      return (
+        <ExerciseFeedbackSummary
+          allRepetitionData={allData}
+          vocabulary={vocabulary}
+          totalDuration={totalDuration}
+          overallAccuracy={overallAccuracy}
+          onClose={onPracticeAgain}
+        />
+      );
+    }
+
+    // Show quick celebration screen first with option to view detailed feedback
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 flex items-center justify-center p-6">
         <div className="max-w-lg w-full text-center">
@@ -207,14 +318,17 @@ export function PhotoFrameExercise({
               <div className="text-emerald-300 text-xs mt-1">Rounds</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-4">
-              <div className="text-3xl font-bold text-white">{Math.round(totalDuration / 60)}m</div>
-              <div className="text-emerald-300 text-xs mt-1">Duration</div>
+              <div className="text-3xl font-bold text-white">{overallAccuracy}%</div>
+              <div className="text-emerald-300 text-xs mt-1">Accuracy</div>
             </div>
           </div>
 
           {allData.length > 0 && (
             <div className="bg-white/5 rounded-2xl p-4 mb-6 text-left">
-              <p className="text-emerald-300 text-sm mb-3">Round breakdown:</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-emerald-300 text-sm">Round breakdown:</p>
+                <span className="text-xs text-emerald-400 font-semibold">Total: {Math.round(totalDuration / 60)}m {totalDuration % 60}s</span>
+              </div>
               <div className="space-y-2">
                 {allData.map(r => (
                   <div key={r.repetitionNumber} className="flex items-center gap-3">
@@ -229,14 +343,22 @@ export function PhotoFrameExercise({
             </div>
           )}
 
-          {onPracticeAgain && (
+          <div className="flex flex-col gap-3">
             <button
-              onClick={onPracticeAgain}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold text-lg hover:opacity-90 transition-all"
+              onClick={() => setShowDetailedFeedback(true)}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-lg hover:opacity-90 transition-all"
             >
-              Back to Plans
+              📊 View Detailed Feedback
             </button>
-          )}
+            {onPracticeAgain && (
+              <button
+                onClick={onPracticeAgain}
+                className="w-full py-4 rounded-2xl bg-white/10 text-white font-bold text-lg hover:bg-white/20 transition-all"
+              >
+                Back to Plans
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -264,19 +386,27 @@ export function PhotoFrameExercise({
 
         {/* Word dots navigation */}
         <div className="flex justify-center gap-1.5 mb-6 flex-wrap">
-          {vocabulary.map((w, i) => (
-            <button
-              key={w.id}
-              onClick={() => { recordTimeForWord(); setCurrentIndex(i); }}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${
-                i === currentIndex
-                  ? 'bg-emerald-400 scale-125'
-                  : confirmedWords.has(w.id)
-                  ? 'bg-emerald-600'
-                  : 'bg-white/20 hover:bg-white/40'
-              }`}
-            />
-          ))}
+          {vocabulary.map((w, i) => {
+            const perf = wordPerformance.get(w.id);
+            const isProblematic = perf && perf.attempts > 1 && !perf.successful;
+            
+            return (
+              <button
+                key={w.id}
+                onClick={() => { recordTimeForWord(); setCurrentIndex(i); }}
+                title={isProblematic ? '⚠️ Needs practice' : confirmedWords.has(w.id) ? '✓ Done' : 'Not started'}
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  i === currentIndex
+                    ? 'bg-emerald-400 scale-125'
+                    : isProblematic
+                    ? 'bg-red-500/70 scale-110 shadow-lg shadow-red-500/50'
+                    : confirmedWords.has(w.id)
+                    ? 'bg-emerald-600'
+                    : 'bg-white/20 hover:bg-white/40'
+                }`}
+              />
+            );
+          })}
         </div>
 
         {/* Main card */}
@@ -333,21 +463,124 @@ export function PhotoFrameExercise({
 
               {/* Instruction */}
               <div className="bg-white/5 rounded-xl p-3 text-center mb-4">
-                <p className="text-emerald-300 text-sm">
-                  🎙️ Say this word out loud, then tap <strong>I said it</strong>
+                <p className="text-emerald-300 text-sm" dir="rtl">
+                  🎙️ اضغط على الميكروفون وقل هذه الكلمة
                 </p>
               </div>
 
-              {/* Confirm button */}
+              {/* Browser support warning */}
+              {speechSupported === false && (
+                <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-center mb-4">
+                  <p className="text-amber-300 text-sm">
+                    ⚠️ متصفحك لا يدعم التعرف على الكلام. يرجى استخدام متصفح حديث مثل Chrome أو Edge أو Safari.
+                  </p>
+                  <p className="text-amber-400 text-xs mt-1">
+                    Browser doesn't support speech recognition. Please use a modern browser.
+                  </p>
+                </div>
+              )}
+
+              {/* Speech feedback */}
+              {showingFeedback && speechFeedback && (
+                <div className={`mb-4 p-4 rounded-xl border-2 ${
+                  speechFeedback.isCorrect
+                    ? 'bg-emerald-500/10 border-emerald-500'
+                    : 'bg-amber-500/10 border-amber-500'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <div className="flex-1">
+                      <p className={`font-semibold text-sm ${
+                        speechFeedback.isCorrect ? 'text-emerald-300' : 'text-amber-300'
+                      }`}>
+                        You said: "{speechFeedback.text}"
+                      </p>
+                      <p className="text-xs text-gray-300 mt-1">{speechFeedback.feedback}</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex-1 h-1 bg-white/10 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all ${
+                              speechFeedback.isCorrect
+                                ? 'bg-emerald-500'
+                                : 'bg-amber-500'
+                            }`}
+                            style={{ width: `${speechFeedback.accuracy}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-semibold text-gray-300 w-8 text-right">
+                          {speechFeedback.accuracy}%
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`text-2xl flex-shrink-0 ${
+                      speechFeedback.isCorrect ? '' : ''
+                    }`}>
+                      {speechFeedback.isCorrect ? '✅' : '⚠️'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Microphone button */}
               <button
-                onClick={handleConfirm}
-                className={`w-full py-3 rounded-xl font-semibold text-sm transition-all ${
+                onClick={() => {
+                  if (microphoneMuted) {
+                    setMicrophoneMuted(false);
+                  } else {
+                    handleSpeechRecognition();
+                  }
+                }}
+                disabled={isRecording || confirmedWords.has(currentWord.id) || speechSupported === false}
+                className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all mb-3 ${
                   confirmedWords.has(currentWord.id)
                     ? 'bg-emerald-500/30 text-emerald-300 cursor-default'
-                    : 'bg-emerald-500 text-white hover:bg-emerald-400'
+                    : isRecording
+                    ? 'bg-red-500 text-white animate-pulse'
+                    : speechSupported === false
+                    ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                    : microphoneMuted
+                    ? 'bg-gray-600 text-gray-200 hover:bg-gray-500'
+                    : 'bg-blue-500 text-white hover:bg-blue-400'
                 }`}
               >
-                {confirmedWords.has(currentWord.id) ? '✓ Practiced this word' : 'I said it! ✓'}
+                {isRecording ? (
+                  <>
+                    <Mic className="w-5 h-5 animate-bounce" />
+                    جاري الاستماع...
+                  </>
+                ) : confirmedWords.has(currentWord.id) ? (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    ✓ تم تأكيد الكلمة
+                  </>
+                ) : speechSupported === false ? (
+                  <>
+                    <Mic className="w-5 h-5 opacity-50" />
+                    غير مدعوم في هذا المتصفح
+                  </>
+                ) : microphoneMuted ? (
+                  <>
+                    <Mic className="w-5 h-5 line-through" />
+                    اضغط لتفعيل الميكروفون
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-5 h-5" />
+                    اضغط للتكلم
+                  </>
+                )}
+              </button>
+
+              {/* Manual confirm button as fallback */}
+              <button
+                onClick={handleConfirm}
+                disabled={confirmedWords.has(currentWord.id)}
+                className={`w-full py-2 rounded-lg text-xs font-medium transition-all ${
+                  confirmedWords.has(currentWord.id)
+                    ? 'bg-gray-500/20 text-gray-400 cursor-default'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                }`}
+              >
+                Skip speech check ✓
               </button>
             </div>
           </div>
@@ -388,10 +621,17 @@ export function PhotoFrameExercise({
         </div>
 
         {/* Progress summary */}
-        <div className="mt-4 text-center">
-          <p className="text-emerald-400/60 text-xs">
+        <div className="mt-4 space-y-2">
+          <p className="text-emerald-400/60 text-xs text-center">
             {confirmedWords.size} of {vocabulary.length} words practiced this round
           </p>
+          {Array.from(wordPerformance.entries()).some(([_, p]) => p.attempts > 1 && !p.successful) && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-center">
+              <p className="text-red-300 text-xs">
+                ⚠️ {Array.from(wordPerformance.entries()).filter(([_, p]) => p.attempts > 1 && !p.successful).length} word(s) need more practice
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

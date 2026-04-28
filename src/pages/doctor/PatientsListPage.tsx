@@ -95,7 +95,7 @@ export function PatientsListPage() {
   };
 
   // Remove unused variable filter function
-  const shouldShowActive = (patient: Patient) => {
+  const shouldShowActive = (_patient: Patient) => {
     // This is a placeholder - adjust based on your Patient type
     return true;
   };

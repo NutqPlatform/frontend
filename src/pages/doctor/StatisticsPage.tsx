@@ -5,7 +5,7 @@ import { getDoctorAnalytics, getOngoingPlans, getDoctorPatients } from '../../se
 import type { DoctorAnalyticsDto, OngoingPlan, Patient } from '../../services/api/dashboard.api';
 import { 
   Users, FileText, Activity, TrendingUp, 
-  Calendar, Target, BarChart as BarChartIcon,
+  Calendar, Target,
   Clock, CheckCircle, User, ChevronRight, Play
 } from 'lucide-react';
 

@@ -30,7 +30,8 @@ export function RegisterPage() {
   const [role, setRole] = useState<Role>('doctor');
   const [invitationCode, setInvitationCode] = useState('');
   const [name, setName] = useState('');
-  const [age, setAge] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -105,14 +106,15 @@ export function RegisterPage() {
           password,
         });
       } else {
-        const ageNumber = Number(age) || 0;
-        await registerPatient({
-          invitationCode,
-          name,
-          age: ageNumber,
-          email,
-          password,
-        });
+          await registerPatient({
+            invitationCode,
+            name,
+            // send ISO date (YYYY-MM-DD) if provided
+            dateOfBirth: dateOfBirth || undefined,
+            phoneNumber: phoneNumber || undefined,
+            email,
+            password,
+          });
       }
 
       setSuccessMessage('Registration successful! Redirecting to login...');
@@ -270,19 +272,29 @@ export function RegisterPage() {
                     <label className="block text-sm font-medium text-gray-700">
                       <div className="flex items-center gap-2">
                         <Calendar size={16} className="text-gray-500" />
-                        Age
+                        Date of Birth
                       </div>
                     </label>
                     <input
-                      type="number"
-                      min={0}
-                      max={120}
+                      type="date"
                       className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3.5 text-gray-900 placeholder-gray-400 shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 transition-all"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
                       required={isPatient}
                       disabled={isSubmitting}
-                      placeholder="Enter your age"
+                    />
+                  </div>
+                )}
+                {isPatient && (
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">Phone Number (optional)</label>
+                    <input
+                      type="tel"
+                      className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3.5 text-gray-900 placeholder-gray-400 shadow-sm focus:border-gray-900 focus:outline-none focus:ring-1 focus:ring-gray-900 transition-all"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value)}
+                      disabled={isSubmitting}
+                      placeholder="e.g. +201234567890"
                     />
                   </div>
                 )}
@@ -392,8 +404,22 @@ export function RegisterPage() {
                     </div>
                     {isPatient && (
                       <div>
-                        <p className="text-sm text-gray-600">Age</p>
-                        <p className="font-medium text-gray-900">{age}</p>
+                        <p className="text-sm text-gray-600">Date of Birth</p>
+                        <p className="font-medium text-gray-900">
+                          {dateOfBirth ? new Date(dateOfBirth).toLocaleDateString() : 'Not specified'}
+                        </p>
+                      </div>
+                    )}
+                    {isPatient && phoneNumber && (
+                      <div>
+                        <p className="text-sm text-gray-600">Phone</p>
+                        <p className="font-medium text-gray-900">{phoneNumber}</p>
+                      </div>
+                    )}
+                    {isPatient && phoneNumber && (
+                      <div>
+                        <p className="text-sm text-gray-600">Phone</p>
+                        <p className="font-medium text-gray-900">{phoneNumber}</p>
                       </div>
                     )}
                     <div>

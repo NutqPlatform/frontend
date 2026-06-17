@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSingleDoctor, type DoctorWithCommunications } from '../services/api/doctor.api';
-import { ArrowLeft, Users, FileText, Mail, Stethoscope } from 'lucide-react';
+import { resolveMediaUrl } from '../utils/mediaUrl';
+import { ArrowLeft, Users, FileText, Mail, Stethoscope, Phone, MapPin } from 'lucide-react';
 
 export function DoctorDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -97,9 +98,17 @@ export function DoctorDetailPage() {
         {/* Header Section */}
         <div className="rounded-xl bg-white border border-gray-200 shadow-sm p-8">
           <div className="flex items-start gap-6">
-            <div className="w-24 h-24 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
-              <Stethoscope className="w-12 h-12" />
-            </div>
+            {doctor.profilePicture ? (
+              <img
+                src={resolveMediaUrl(doctor.profilePicture)}
+                alt={doctor.name}
+                className="w-24 h-24 rounded-xl object-cover flex-shrink-0 ring-4 ring-blue-50"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+                <Stethoscope className="w-12 h-12" />
+              </div>
+            )}
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900">{doctor.name}</h1>
               <div className="mt-4 space-y-2">
@@ -107,29 +116,43 @@ export function DoctorDetailPage() {
                   <Mail size={18} className="text-gray-500" />
                   <span className="text-gray-700">{doctor.email}</span>
                 </div>
-                {doctor.profilePicture && (
+                {doctor.phoneNumber && (
                   <div className="flex items-center gap-3">
-                    <FileText size={18} className="text-gray-500" />
-                    <a
-                      href={doctor.profilePicture}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-700 underline"
-                    >
-                      View Profile Picture
-                    </a>
+                    <Phone size={18} className="text-gray-500" />
+                    <span className="text-gray-700">{doctor.phoneNumber}</span>
+                  </div>
+                )}
+                {doctor.address && (
+                  <div className="flex items-start gap-3">
+                    <MapPin size={18} className="text-gray-500 mt-0.5" />
+                    <span className="text-gray-700">{doctor.address}</span>
+                  </div>
+                )}
+                {doctor.age != null && (
+                  <div className="text-sm text-gray-600">Age: {doctor.age}</div>
+                )}
+                {doctor.communicationInfo && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Communication Info</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{doctor.communicationInfo}</p>
+                  </div>
+                )}
+                {doctor.cvText && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-700 mb-1">CV Summary</p>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{doctor.cvText}</p>
                   </div>
                 )}
                 {doctor.cv && (
                   <div className="flex items-center gap-3">
                     <FileText size={18} className="text-gray-500" />
                     <a
-                      href={doctor.cv}
+                      href={resolveMediaUrl(doctor.cv)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:text-blue-700 underline"
                     >
-                      View CV
+                      View CV File
                     </a>
                   </div>
                 )}

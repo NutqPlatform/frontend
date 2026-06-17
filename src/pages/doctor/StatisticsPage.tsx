@@ -255,18 +255,23 @@ export function StatisticsPage() {
             {/* Simple Progress Chart */}
             <div className="space-y-4">
               {patients.slice(0, 5).map((patient) => {
-                // Calculate a mock progress for demonstration
-                const progress = Math.min(100, Math.floor(Math.random() * 100));
+                // Derive real progress from ongoing plans for the patient
+                const patientPlans = plans.filter(p => p.patientId === patient.id && p.progressPercentage !== undefined);
+                const progress = patientPlans.length > 0
+                  ? patientPlans.reduce((sum, p) => sum + (p.progressPercentage ?? 0), 0) / patientPlans.length
+                  : 0;
+                const progressPercent = Math.min(100, Math.max(0, Number(progress.toFixed(1))));
+
                 return (
                   <div key={patient.id} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-700">{patient.name}</span>
-                      <span className="text-sm text-gray-600">{progress}%</span>
+                      <span className="text-sm text-gray-600">{progressPercent}%</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
                       <div
                         className="h-full bg-gray-900 rounded-full transition-all duration-500"
-                        style={{ width: `${progress}%` }}
+                        style={{ width: `${progressPercent}%` }}
                       />
                     </div>
                   </div>
@@ -377,72 +382,11 @@ export function StatisticsPage() {
             )}
           </div>
 
-          {/* System Status */}
-          <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
-            <h3 className="font-semibold text-gray-900 mb-4">System Status</h3>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">API Status</span>
-                <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
-                  Online
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Data Sync</span>
-                <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-700">
-                  Up to date
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Storage</span>
-                <span className="text-sm font-medium text-gray-900">85% used</span>
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
 
-      {/* Bottom Section - Additional Metrics */}
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-gray-100">
-              <Clock size={20} className="text-gray-600" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Average Session Time</h4>
-              <p className="text-sm text-gray-600">Per patient session</p>
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">28 min</div>
-        </div>
-
-        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-gray-100">
-              <CheckCircle size={20} className="text-gray-600" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Weekly Completions</h4>
-              <p className="text-sm text-gray-600">Exercises completed this week</p>
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">142</div>
-        </div>
-
-        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-lg bg-gray-100">
-              <TrendingUp size={20} className="text-gray-600" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-gray-900">Patient Satisfaction</h4>
-              <p className="text-sm text-gray-600">Based on recent feedback</p>
-            </div>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">4.8/5</div>
-        </div>
-      </div>
+      {/* Bottom metrics removed — no reliable backend endpoints available to compute these. */}
     </div>
   );
 }

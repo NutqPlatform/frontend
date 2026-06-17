@@ -17,12 +17,16 @@ export interface DoctorRegisterPayload {
   name: string;
   email: string;
   password: string;
+  phoneNumber?: string;
 }
 
 export interface PatientRegisterPayload {
   invitationCode: string;
   name: string;
-  age: number;
+  // ISO date string (YYYY-MM-DD)
+  dateOfBirth?: string;
+  // optional phone number
+  phoneNumber?: string;
   email: string;
   password: string;
 }

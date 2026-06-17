@@ -5,9 +5,13 @@ export interface PatientProfile {
   name: string;
   email: string;
   age?: number;
+  phoneNumber?: string;
   diagnosis?: string;
+  diagnosisFileUrl?: string;
   profilePicture?: string;
   doctorId?: number;
+  dateOfBirth?: string;
+  createdAt?: string;
 }
 
 export interface DoctorPatient {
@@ -35,6 +39,12 @@ export interface AttendingDoctor {
   email: string;
   profilePicture?: string;
   cv?: string;
+  cvText?: string;
+  phoneNumber?: string;
+  address?: string;
+  communicationInfo?: string;
+  age?: number;
+  averageRating?: number;
   patients?: DoctorPatient[];
   weeklyReports?: DoctorWeeklyReport[];
 }
@@ -46,9 +56,10 @@ export async function getPatientProfile(patientId: number): Promise<PatientProfi
 
 export async function updatePatientProfile(
   patientId: number,
-  updates: { profilePicture?: string }
-): Promise<void> {
-  await apiClient.put(`/Patient/${patientId}/profile`, updates);
+  updates: { profilePicture?: string; phoneNumber?: string; dateOfBirth?: string }
+): Promise<PatientProfile> {
+  const response = await apiClient.put<PatientProfile>(`/Patient/${patientId}/profile`, updates);
+  return response.data;
 }
 
 export async function updatePatientPassword(

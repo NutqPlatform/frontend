@@ -13,6 +13,7 @@ import { PatientReportsPage } from './pages/patient/PatientReportsPage';
 import { PronounceWordExercisePage } from './pages/patient/PronounceWordExercisePage';
 import { PatientsListPage } from './pages/doctor/PatientsListPage';
 import { PatientDetailPage } from './pages/doctor/PatientDetailPage';
+import { PlanExerciseSelectionPage } from './pages/doctor/PlanExerciseSelectionPage';
 import { InvitationCodePage } from './pages/doctor/InvitationCodePage';
 import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
 import { PlansPage } from './pages/doctor/PlansPage';
@@ -20,6 +21,10 @@ import { ExercisesPage } from './pages/doctor/ExercisesPage';
 import { StatisticsPage } from './pages/doctor/StatisticsPage';
 import { DoctorsPage } from './pages/DoctorsPage';
 import { DoctorDetailPage } from './pages/DoctorDetailPage';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import DoctorProfilePagePatient from './pages/patient/DoctorProfilePage';
+import ReviewDoctorPage from './pages/patient/ReviewDoctorPage';
 
 function App() {
   return (
@@ -69,6 +74,26 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <PatientsListPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/patients/:patientId/plans/new/exercises"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <PlanExerciseSelectionPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/patients/:patientId/plans/:planId/exercises/add"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <PlanExerciseSelectionPage />
                 </MainLayout>
               </ProtectedRoute>
             }
@@ -192,6 +217,37 @@ function App() {
                 <MainLayout>
                   <PronounceWordExercisePage />
                 </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/doctor/:doctorId/profile"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <DoctorProfilePagePatient />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/doctor/:doctorId/review"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <ReviewDoctorPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />

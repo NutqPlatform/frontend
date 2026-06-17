@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { getDoctorProfile, updateDoctorProfile, updateDoctorPassword } from '../../services/api/doctor.api';
 import type { DoctorProfile } from '../../services/api/doctor.api';
+import { resolveMediaUrl } from '../../utils/mediaUrl';
 import { Camera, FileText, Lock, User, Check, X, Upload, Shield } from 'lucide-react';
 
 export function DoctorProfilePage() {
@@ -28,6 +29,17 @@ export function DoctorProfilePage() {
     confirmPassword: '',
   });
   const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  // Basic info editing
+  const [isEditingBasic, setIsEditingBasic] = useState(false);
+  const [basicForm, setBasicForm] = useState({
+    name: '',
+    phoneNumber: '',
+    communicationInfo: '',
+    address: '',
+    dateOfBirth: '',
+    cvText: '',
+  });
+  const [isUpdatingBasic, setIsUpdatingBasic] = useState(false);
 
   useEffect(() => {
     if (user?.id && user?.role === 'doctor') {
@@ -45,6 +57,14 @@ export function DoctorProfilePage() {
       const profileData = await getDoctorProfile(user.id);
       setProfile(profileData);
       setPhotoPreview(profileData.profilePicture || null);
+      setBasicForm({
+        name: profileData.name || '',
+        phoneNumber: profileData.phoneNumber || '',
+        communicationInfo: profileData.communicationInfo || '',
+        address: profileData.address || '',
+        dateOfBirth: profileData.dateOfBirth || '',
+        cvText: profileData.cvText || '',
+      });
     } catch (err: any) {
       const errorMessage = err?.response?.data?.error || err?.message || 'Failed to load profile';
       setError(errorMessage);
@@ -127,23 +147,25 @@ export function DoctorProfilePage() {
 
     try {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        updateDoctorProfile(user.id, { cv: base64 })
-          .then(() => {
-            setProfile({ ...profile!, cv: base64 });
-            setIsEditingCV(false);
-            setCvFile(null);
-            setSuccess('CV updated successfully');
-            setTimeout(() => setSuccess(null), 3000);
-          })
-          .catch((err) => {
-            setError('Failed to update CV');
-            console.error(err);
-          })
-          .finally(() => {
-            setIsUpdatingCV(false);
+      reader.onloadend = async () => {
+        const base64Full = reader.result as string;
+        const base64 = base64Full.includes(',') ? base64Full.split(',')[1] : base64Full;
+        try {
+          await updateDoctorProfile(user.id, {
+            cvFileBase64: base64,
+            cvFileName: cvFile.name,
           });
+          await loadProfile();
+          setIsEditingCV(false);
+          setCvFile(null);
+          setSuccess('CV updated successfully');
+          setTimeout(() => setSuccess(null), 3000);
+        } catch (err) {
+          setError('Failed to update CV');
+          console.error(err);
+        } finally {
+          setIsUpdatingCV(false);
+        }
       };
       reader.readAsDataURL(cvFile);
     } catch (err) {
@@ -462,7 +484,14 @@ export function DoctorProfilePage() {
                       </div>
                       <div>
                         <p className="font-medium text-gray-900">CV Uploaded</p>
-                        <p className="text-sm text-gray-600">Your CV is available for reference</p>
+                        <a
+                          href={resolveMediaUrl(profile.cv)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 underline"
+                        >
+                          View / Download CV
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -482,28 +511,206 @@ export function DoctorProfilePage() {
         <div className="space-y-6">
           {/* Basic Information Card */}
           <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900 mb-6">Basic Information</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Basic Information</h2>
+              {!isEditingBasic ? (
+                <button
+                  onClick={() => setIsEditingBasic(true)}
+                  className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-sm text-gray-700"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      // Save
+                      if (!user?.id) return;
+                      setIsUpdatingBasic(true);
+                      setError(null);
+                      try {
+                        // Ensure date is sent in an ISO-compatible format so the backend can parse reliably
+                        const dob = basicForm.dateOfBirth
+                          ? (basicForm.dateOfBirth.includes('T') ? basicForm.dateOfBirth : `${basicForm.dateOfBirth}T00:00:00Z`)
+                          : undefined;
+
+                        await updateDoctorProfile(user.id, {
+                          name: basicForm.name,
+                          phoneNumber: basicForm.phoneNumber,
+                          communicationInfo: basicForm.communicationInfo,
+                          address: basicForm.address,
+                          dateOfBirth: dob,
+                          cvText: basicForm.cvText,
+                        });
+                        await loadProfile();
+                        setIsEditingBasic(false);
+                        setSuccess('Profile updated');
+                        setTimeout(() => setSuccess(null), 3000);
+                      } catch (err: any) {
+                        const errorMessage = err?.response?.data?.error || err?.message || 'Failed to save basic info';
+                        setError(errorMessage);
+                      } finally {
+                        setIsUpdatingBasic(false);
+                      }
+                    }}
+                    className="px-3 py-1 rounded-lg bg-indigo-600 text-white text-sm"
+                    disabled={isUpdatingBasic}
+                  >
+                    {isUpdatingBasic ? 'Saving...' : 'Save'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingBasic(false);
+                      // reset form
+                      setBasicForm({
+                        name: profile.name || '',
+                        phoneNumber: profile.phoneNumber || '',
+                        communicationInfo: profile.communicationInfo || '',
+                        address: profile.address || '',
+                        dateOfBirth: profile.dateOfBirth || '',
+                        cvText: profile.cvText || '',
+                      });
+                    }}
+                    className="px-3 py-1 rounded-lg border border-gray-300 bg-white text-sm text-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <User className="w-5 h-5 text-blue-600" />
+              {isEditingBasic ? (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input
+                      value={basicForm.name}
+                      onChange={(e) => setBasicForm({ ...basicForm, name: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <input value={profile.email} disabled className="w-full rounded-lg border border-gray-200 px-4 py-2 bg-gray-50" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Phone</label>
+                    <input
+                      value={basicForm.phoneNumber}
+                      onChange={(e) => setBasicForm({ ...basicForm, phoneNumber: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Date of Birth</label>
+                    <input
+                      type="date"
+                      value={basicForm.dateOfBirth ? basicForm.dateOfBirth.split('T')[0] : ''}
+                      onChange={(e) => setBasicForm({ ...basicForm, dateOfBirth: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Address</label>
+                    <input
+                      value={basicForm.address}
+                      onChange={(e) => setBasicForm({ ...basicForm, address: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Communication Info</label>
+                    <textarea
+                      value={basicForm.communicationInfo}
+                      onChange={(e) => setBasicForm({ ...basicForm, communicationInfo: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">CV Summary (text)</label>
+                    <textarea
+                      value={basicForm.cvText}
+                      onChange={(e) => setBasicForm({ ...basicForm, cvText: e.target.value })}
+                      className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                      rows={4}
+                      placeholder="Brief professional summary..."
+                    />
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Full Name</p>
-                  <p className="text-lg font-semibold text-gray-900">{profile.name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-700">Email Address</p>
-                  <p className="text-lg font-semibold text-gray-900">{profile.email}</p>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Full Name</p>
+                      <p className="text-lg font-semibold text-gray-900">{profile.name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Email Address</p>
+                      <p className="text-lg font-semibold text-gray-900">{profile.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Phone</p>
+                      <p className="text-lg font-semibold text-gray-900">{profile.phoneNumber || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                      <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Address</p>
+                      <p className="text-gray-900">{profile.address || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  {profile.dateOfBirth && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Date of Birth</p>
+                      <p className="text-gray-900">{new Date(profile.dateOfBirth).toLocaleDateString()}</p>
+                      {profile.age != null && (
+                        <p className="text-sm text-gray-600 mt-1">{profile.age} years</p>
+                      )}
+                    </div>
+                  )}
+                  {profile.communicationInfo && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">Communication Info</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{profile.communicationInfo}</p>
+                    </div>
+                  )}
+                  {profile.cvText && (
+                    <div>
+                      <p className="text-sm font-medium text-gray-700">CV Summary</p>
+                      <p className="text-gray-900 whitespace-pre-wrap">{profile.cvText}</p>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

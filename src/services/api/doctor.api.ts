@@ -6,6 +6,14 @@ export interface DoctorProfile {
   email: string;
   profilePicture?: string;
   cv?: string;
+  phoneNumber?: string;
+  communicationInfo?: string;
+  address?: string;
+  dateOfBirth?: string;
+  age?: number;
+  createdAt?: string;
+  averageRating?: number;
+  cvText?: string;
 }
 
 export interface DoctorPatient {
@@ -13,6 +21,7 @@ export interface DoctorPatient {
   name: string;
   email: string;
   age?: number;
+  phoneNumber?: string;
   profilePicture?: string;
 }
 
@@ -35,6 +44,14 @@ export interface DoctorWithCommunications extends DoctorProfile {
 export interface UpdateDoctorProfileRequest {
   profilePicture?: string;
   cv?: string;
+  cvFileBase64?: string;
+  cvFileName?: string;
+  name?: string;
+  phoneNumber?: string;
+  communicationInfo?: string;
+  address?: string;
+  dateOfBirth?: string;
+  cvText?: string;
 }
 
 export interface UpdatePasswordRequest {

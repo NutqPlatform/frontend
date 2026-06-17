@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { loginDoctor as apiLoginDoctor, loginPatient as apiLoginPatient } from '../services/api/auth.api';
+import adminAPI from '../services/api/admin.api';
 import type { AuthResult } from '../services/api/auth.api';
 import type { AuthContextType, User } from '../types/auth';
 
@@ -74,6 +75,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginAdmin = async (email: string, password: string): Promise<void> => {
+    try {
+      const result = await adminAPI.login({ email, password });
+      
+      if (!result.success) {
+        throw new Error(result.message || 'Admin login failed');
+      }
+
+      const userData: User = {
+        id: result.userId,
+        email: result.email,
+        name: result.name,
+        role: 'admin',
+      };
+
+      setToken(result.token || '');
+      setUser(userData);
+      
+      localStorage.setItem(AUTH_TOKEN_KEY, result.token || '');
+      localStorage.setItem(USER_KEY, JSON.stringify(userData));
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const logout = (): void => {
     setToken(null);
     setUser(null);
@@ -88,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     loginDoctor,
     loginPatient,
+    loginAdmin,
     logout,
   };
 

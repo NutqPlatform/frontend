@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getDoctorPatients } from '../../services/api/dashboard.api';
 import type { Patient } from '../../services/api/dashboard.api';
-import { Users, UserPlus, Search, Filter, Calendar, Activity, ChevronRight, Mail, User as UserIcon, MoreVertical, AlertCircle } from 'lucide-react'; // Removed Phone import
+import { Users, UserPlus, Search, Filter, Calendar, Activity, ChevronRight, Mail, User as UserIcon, MoreVertical, AlertCircle, Phone } from 'lucide-react';
+import { resolveMediaUrl } from '../../utils/mediaUrl';
 
 export function PatientsListPage() {
   const { user } = useAuth();
@@ -309,12 +310,19 @@ export function PatientsListPage() {
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4 flex-1">
                   <div className="relative">
-                    {/* Removed profilePicture condition since it doesn't exist in Patient type */}
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
-                      <span className="text-white font-bold text-lg">
-                        {getInitials(patient.name)}
-                      </span>
-                    </div>
+                    {patient.profilePicture ? (
+                      <img
+                        src={resolveMediaUrl(patient.profilePicture)}
+                        alt={patient.name}
+                        className="w-16 h-16 rounded-2xl object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">
+                          {getInitials(patient.name)}
+                        </span>
+                      </div>
+                    )}
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500 border-2 border-white" />
                   </div>
                   
@@ -331,10 +339,16 @@ export function PatientsListPage() {
                         <Mail size={14} />
                         <span>{patient.email}</span>
                       </div>
-                      {patient.age && (
+                      {patient.age != null && (
                         <div className="flex items-center gap-2">
                           <UserIcon size={14} />
                           <span>{patient.age} years</span>
+                        </div>
+                      )}
+                      {patient.phoneNumber && (
+                        <div className="flex items-center gap-2">
+                          <Phone size={14} />
+                          <span>{patient.phoneNumber}</span>
                         </div>
                       )}
                     </div>

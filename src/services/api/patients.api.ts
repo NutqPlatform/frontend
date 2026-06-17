@@ -6,7 +6,11 @@ export interface PatientDetails {
   email: string;
   age?: number;
   diagnosis?: string;
+  diagnosisFileUrl?: string;
   profilePicture?: string;
+  phoneNumber?: string;
+  dateOfBirth?: string;
+  createdAt?: string;
 }
 
 export interface PlanExercise {
@@ -39,6 +43,14 @@ export interface CreatePlanRequest {
   status?: string;
   startDate: Date;
   endDate?: Date;
+  exercises: PlanExerciseInput[];
+}
+
+export interface PlanExerciseInput {
+  exerciseId: number;
+  durationMinutes: number;
+  repetition: number;
+  aiConstraints?: string;
 }
 
 // Get single patient details
@@ -76,6 +88,12 @@ export async function createPlan(
       status: plan.status || 'Active',
       startDate: plan.startDate.toISOString(),
       endDate: plan.endDate?.toISOString(),
+      exercises: plan.exercises.map((ex) => ({
+        exerciseId: ex.exerciseId,
+        durationMinutes: ex.durationMinutes,
+        repetition: ex.repetition,
+        aiConstraints: ex.aiConstraints,
+      })),
     }
   );
   return response.data;
@@ -85,11 +103,13 @@ export async function createPlan(
 export async function updatePatientDiagnosis(
   doctorId: number,
   patientId: number,
-  diagnosis: string
+  diagnosis: string,
+  diagnosisFileBase64?: string,
+  diagnosisFileName?: string
 ): Promise<void> {
   await apiClient.put(
     `/Doctor/${doctorId}/patients/${patientId}/diagnosis`,
-    { diagnosis }
+    { diagnosis, diagnosisFileBase64, diagnosisFileName }
   );
 }
 

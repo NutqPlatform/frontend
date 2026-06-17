@@ -34,6 +34,10 @@ export interface Patient {
   name: string;
   email: string;
   age?: number;
+  phoneNumber?: string;
+  profilePicture?: string;
+  diagnosis?: string;
+  createdAt?: string;
 }
 
 export interface DoctorPatientsResponse {

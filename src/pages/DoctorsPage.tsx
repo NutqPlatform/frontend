@@ -7,7 +7,8 @@ import {
   type DoctorPatient,
   type DoctorWeeklyReport,
 } from '../services/api/doctor.api';
-import { Search, Users, Layers, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Users, Layers, ChevronDown, ChevronUp, Phone, MapPin } from 'lucide-react';
+import { resolveMediaUrl } from '../utils/mediaUrl';
 
 export function DoctorsPage() {
   const { user } = useAuth();
@@ -154,6 +155,44 @@ export function DoctorsPage() {
 
                   {isExpanded && (
                     <div className="border-t border-gray-200 px-6 py-4">
+                      <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        {doctor.phoneNumber && (
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <Phone size={16} className="text-gray-500" />
+                            <span>{doctor.phoneNumber}</span>
+                          </div>
+                        )}
+                        {doctor.address && (
+                          <div className="flex items-start gap-2 text-gray-700">
+                            <MapPin size={16} className="text-gray-500 mt-0.5" />
+                            <span>{doctor.address}</span>
+                          </div>
+                        )}
+                        {doctor.cvText && (
+                          <div className="md:col-span-2 p-3 bg-gray-50 rounded-lg">
+                            <p className="font-medium text-gray-900 mb-1">CV Summary</p>
+                            <p className="text-gray-600 whitespace-pre-wrap">{doctor.cvText}</p>
+                          </div>
+                        )}
+                        {doctor.cv && (
+                          <div>
+                            <a
+                              href={resolveMediaUrl(doctor.cv)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:text-blue-700 underline"
+                            >
+                              View CV File
+                            </a>
+                          </div>
+                        )}
+                        {doctor.communicationInfo && (
+                          <div className="md:col-span-2 p-3 bg-gray-50 rounded-lg">
+                            <p className="font-medium text-gray-900 mb-1">Communication Info</p>
+                            <p className="text-gray-600 whitespace-pre-wrap">{doctor.communicationInfo}</p>
+                          </div>
+                        )}
+                      </div>
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                         <div>
                           <div className="flex items-center gap-2 mb-2">

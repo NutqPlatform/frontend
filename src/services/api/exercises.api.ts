@@ -41,7 +41,7 @@ export interface AddExerciseToPlanRequest {
 export async function addExerciseToPlan(
   planId: number,
   request: AddExerciseToPlanRequest
-): Promise<any> {
+): Promise<any[]> {
   const response = await apiClient.post(`/TherapyPlan/plan/${planId}/add-exercise`, request);
   return response.data;
 }

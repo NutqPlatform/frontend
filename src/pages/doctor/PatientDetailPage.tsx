@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { getPatientDetails, getPatientPlans, createPlan, updatePatientDiagnosis, deleteExerciseFromPlan, updatePlanStatus, getPlanProgress } from '../../services/api/patients.api';
-import { getAllExercises, addExerciseToPlan } from '../../services/api/exercises.api';
+import { getPatientDetails, getPatientPlans, updatePatientDiagnosis, deleteExerciseFromPlan, updatePlanStatus, getPlanProgress } from '../../services/api/patients.api';
 import { createWeeklyReport, updateWeeklyReport, getReportByPlan } from '../../services/api/weeklyReport.api';
 import type { PatientDetails, TherapyPlan } from '../../services/api/patients.api';
-import type { Exercise, AddExerciseToPlanRequest } from '../../services/api/exercises.api';
+import { resolveMediaUrl } from '../../utils/mediaUrl';
 import { 
   User, Calendar, Activity, Target, FileText, Plus, Edit2, 
   Trash2, CheckCircle, AlertCircle, ChevronRight, X 
@@ -13,16 +12,18 @@ import {
 
 export function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [patient, setPatient] = useState<PatientDetails | null>(null);
   const [plans, setPlans] = useState<TherapyPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddPlanForm, setShowAddPlanForm] = useState(false);
-  const [isCreatingPlan, setIsCreatingPlan] = useState(false);
   const [isEditingDiagnosis, setIsEditingDiagnosis] = useState(false);
   const [diagnosisValue, setDiagnosisValue] = useState('');
   const [isUpdatingDiagnosis, setIsUpdatingDiagnosis] = useState(false);
+  const [diagnosisFileBase64, setDiagnosisFileBase64] = useState<string | null>(null);
+  const [diagnosisFileName, setDiagnosisFileName] = useState<string | null>(null);
   const [planForm, setPlanForm] = useState({
     description: '',
     status: 'Active',
@@ -30,15 +31,6 @@ export function PatientDetailPage() {
     endDate: '',
   });
   const [planProgress, setPlanProgress] = useState<Record<number, number>>({});
-  const [availableExercises, setAvailableExercises] = useState<Exercise[]>([]);
-  const [showAddExerciseForm, setShowAddExerciseForm] = useState<number | null>(null);
-  const [exerciseForm, setExerciseForm] = useState<AddExerciseToPlanRequest>({
-    exerciseId: 0,
-    durationMinutes: 30,
-    repetition: 1,
-    aiConstraints: '',
-  });
-  const [isAddingExercise, setIsAddingExercise] = useState(false);
   const [reportsByPlan, setReportsByPlan] = useState<Record<number, any>>({});
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
@@ -73,15 +65,13 @@ export function PatientDetailPage() {
       setDiagnosisValue(patientData.diagnosis || '');
       
       try {
-        const [plansData, exercisesData] = await Promise.all([
+        const [plansData] = await Promise.all([
           getPatientPlans(user.id, patientId),
-          getAllExercises(),
         ]);
         const sortedPlans = [...plansData].sort(
           (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
         );
         setPlans(sortedPlans);
-        setAvailableExercises(exercisesData);
         
         const progressPromises = plansData.map(async (plan) => {
           try {
@@ -134,34 +124,20 @@ export function PatientDetailPage() {
     }
   };
 
-  const handleCreatePlan = async (e: React.FormEvent) => {
+  const handleProceedToExerciseSelection = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id || !id) return;
+    if (!id) return;
 
-    setIsCreatingPlan(true);
-    setError(null);
-
-    try {
-      const newPlan = await createPlan(user.id, parseInt(id), {
-        description: planForm.description,
-        status: planForm.status,
-        startDate: new Date(planForm.startDate),
-        endDate: planForm.endDate ? new Date(planForm.endDate) : undefined,
-      });
-      setPlans([newPlan, ...plans]);
-      setShowAddPlanForm(false);
-      setPlanForm({
-        description: '',
-        status: 'Active',
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: '',
-      });
-    } catch (err) {
-      setError('Failed to create plan');
-      console.error(err);
-    } finally {
-      setIsCreatingPlan(false);
-    }
+    navigate(`/doctor/patients/${id}/plans/new/exercises`, {
+      state: {
+        planDraft: {
+          description: planForm.description,
+          status: planForm.status,
+          startDate: planForm.startDate,
+          endDate: planForm.endDate || undefined,
+        },
+      },
+    });
   };
 
   const handleUpdateDiagnosis = async () => {
@@ -171,15 +147,31 @@ export function PatientDetailPage() {
     setError(null);
 
     try {
-      await updatePatientDiagnosis(user.id, parseInt(id), diagnosisValue);
-      setPatient({ ...patient!, diagnosis: diagnosisValue });
+      await updatePatientDiagnosis(user.id, parseInt(id), diagnosisValue, diagnosisFileBase64 || undefined, diagnosisFileName || undefined);
+      await loadPatientData();
       setIsEditingDiagnosis(false);
+      setDiagnosisFileBase64(null);
+      setDiagnosisFileName(null);
     } catch (err) {
       setError('Failed to update diagnosis');
       console.error(err);
     } finally {
       setIsUpdatingDiagnosis(false);
     }
+  };
+
+  const handleDiagnosisFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDiagnosisFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // strip data:*/*;base64, prefix if present
+      const base64 = result.split(',')[1] ?? result;
+      setDiagnosisFileBase64(base64);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDeleteExercise = async (planId: number, planExerciseId: number) => {
@@ -199,28 +191,6 @@ export function PatientDetailPage() {
       await loadPatientData();
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to update plan status');
-    }
-  };
-
-  const handleAddExercise = async (planId: number, e: React.FormEvent) => {
-    e.preventDefault();
-    if (!exerciseForm.exerciseId) {
-      setError('Please select an exercise');
-      return;
-    }
-
-    setIsAddingExercise(true);
-    setError(null);
-
-    try {
-      await addExerciseToPlan(planId, exerciseForm);
-      setShowAddExerciseForm(null);
-      setExerciseForm({ exerciseId: 0, durationMinutes: 30, repetition: 1, aiConstraints: '' });
-      await loadPatientData();
-    } catch (err: any) {
-      setError(err?.response?.data?.error || 'Failed to add exercise');
-    } finally {
-      setIsAddingExercise(false);
     }
   };
 
@@ -376,10 +346,19 @@ export function PatientDetailPage() {
                       <span className="font-medium text-gray-900">{patient.age}</span>
                     </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Member Since</span>
-                    <span className="font-medium text-gray-900">2024</span>
-                  </div>
+                  {patient.phoneNumber && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Phone</span>
+                      <span className="font-medium text-gray-900">{patient.phoneNumber}</span>
+                    </div>
+                  )}
+                  {patient.createdAt && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Member Since</span>
+                      <span className="font-medium text-gray-900">{new Date(patient.createdAt).getFullYear()}</span>
+                    </div>
+                  )}
+
                 </div>
               </div>
 
@@ -407,6 +386,13 @@ export function PatientDetailPage() {
                       rows={3}
                       placeholder="Enter diagnosis..."
                     />
+                    <div className="mt-2">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Attach file (optional)</label>
+                      <input type="file" accept="*/*" onChange={handleDiagnosisFileChange} />
+                      {diagnosisFileName && (
+                        <div className="text-xs text-gray-500 mt-1">Selected: {diagnosisFileName}</div>
+                      )}
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={handleUpdateDiagnosis}
@@ -427,9 +413,22 @@ export function PatientDetailPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-700">
-                    {patient.diagnosis || <span className="text-gray-400">No diagnosis recorded</span>}
-                  </p>
+                  <div>
+                    <p className="text-sm text-gray-700">
+                      {patient.diagnosis || <span className="text-gray-400">No diagnosis recorded</span>}
+                    </p>
+                    {patient.diagnosisFileUrl && (
+                      <a
+                        href={resolveMediaUrl(patient.diagnosisFileUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 mt-2 text-sm text-blue-600 hover:text-blue-700 underline"
+                      >
+                        <FileText size={14} />
+                        View Diagnosis File
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -484,7 +483,7 @@ export function PatientDetailPage() {
           {showAddPlanForm && (
             <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200 animate-slide-down">
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Create New Therapy Plan</h3>
-              <form onSubmit={handleCreatePlan} className="space-y-6">
+              <form onSubmit={handleProceedToExerciseSelection} className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Plan Description
@@ -536,20 +535,10 @@ export function PatientDetailPage() {
                 <div className="flex gap-3 pt-2">
                   <button
                     type="submit"
-                    disabled={isCreatingPlan}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-white font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-white font-medium hover:bg-gray-800 transition-all"
                   >
-                    {isCreatingPlan ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Creating Plan...
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={18} />
-                        Create Plan
-                      </>
-                    )}
+                    <Plus size={18} />
+                    Next: Select Exercises
                   </button>
                   <button
                     type="button"
@@ -657,7 +646,7 @@ export function PatientDetailPage() {
                       <h4 className="font-medium text-gray-900">Exercises</h4>
                       {plan.status === 'Active' && (
                         <button
-                          onClick={() => setShowAddExerciseForm(showAddExerciseForm === plan.id ? null : plan.id)}
+                          onClick={() => navigate(`/doctor/patients/${id}/plans/${plan.id}/exercises/add`)}
                           className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
                         >
                           <Plus size={14} />
@@ -665,76 +654,6 @@ export function PatientDetailPage() {
                         </button>
                       )}
                     </div>
-
-                    {showAddExerciseForm === plan.id && (
-                      <form onSubmit={(e) => handleAddExercise(plan.id, e)} className="mb-4 rounded-xl border border-gray-200 bg-gray-50 p-4 animate-slide-down">
-                        <div className="space-y-4">
-                          <select
-                            value={exerciseForm.exerciseId}
-                            onChange={(e) => setExerciseForm({ ...exerciseForm, exerciseId: parseInt(e.target.value) })}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                            required
-                          >
-                            <option value={0}>Select an exercise...</option>
-                            {availableExercises.map((ex) => (
-                              <option key={ex.id} value={ex.id}>{ex.name}</option>
-                            ))}
-                          </select>
-                          
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Duration (min)</label>
-                              <input
-                                type="number"
-                                value={exerciseForm.durationMinutes}
-                                onChange={(e) => setExerciseForm({ ...exerciseForm, durationMinutes: parseInt(e.target.value) || 30 })}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                                required
-                                min={1}
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">Repetitions</label>
-                              <input
-                                type="number"
-                                value={exerciseForm.repetition}
-                                onChange={(e) => setExerciseForm({ ...exerciseForm, repetition: parseInt(e.target.value) || 1 })}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                                required
-                                min={1}
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex gap-2">
-                            <button
-                              type="submit"
-                              disabled={isAddingExercise}
-                              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white font-medium hover:bg-gray-800 disabled:opacity-50"
-                            >
-                              {isAddingExercise ? (
-                                <>
-                                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                  Adding...
-                                </>
-                              ) : (
-                                'Add Exercise'
-                              )}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setShowAddExerciseForm(null);
-                                setExerciseForm({ exerciseId: 0, durationMinutes: 30, repetition: 1, aiConstraints: '' });
-                              }}
-                              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 font-medium hover:bg-gray-50"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      </form>
-                    )}
 
                     {plan.exercises && plan.exercises.length > 0 ? (
                       <div className="space-y-2">

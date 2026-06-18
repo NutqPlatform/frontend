@@ -10,7 +10,6 @@ import { ArrowLeft, Search, Activity, Check, AlertCircle } from 'lucide-react';
 
 export interface PlanDraft {
   description: string;
-  status: string;
   startDate: string;
   endDate?: string;
 }
@@ -132,7 +131,6 @@ export function PlanExerciseSelectionPage() {
       if (isCreateMode && planDraft) {
         await createPlan(user.id, parseInt(patientId, 10), {
           description: planDraft.description,
-          status: planDraft.status,
           startDate: new Date(planDraft.startDate),
           endDate: planDraft.endDate ? new Date(planDraft.endDate) : undefined,
           exercises: exercisePayload,

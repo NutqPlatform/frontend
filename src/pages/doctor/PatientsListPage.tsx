@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getDoctorPatients } from '../../services/api/dashboard.api';
+import { getFormerPatients, type FormerPatient } from '../../services/api/transfer.api';
 import type { Patient } from '../../services/api/dashboard.api';
 import { Users, UserPlus, Search, Filter, Calendar, Activity, ChevronRight, Mail, User as UserIcon, MoreVertical, AlertCircle, Phone } from 'lucide-react';
 import { resolveMediaUrl } from '../../utils/mediaUrl';
@@ -10,6 +11,8 @@ export function PatientsListPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [formerPatients, setFormerPatients] = useState<FormerPatient[]>([]);
+  const [activeTab, setActiveTab] = useState<'current' | 'former'>('current');
   const [filteredPatients, setFilteredPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,8 +37,12 @@ export function PatientsListPage() {
     setError(null);
 
     try {
-      const patientsData = await getDoctorPatients(user.id);
+      const [patientsData, formerData] = await Promise.all([
+        getDoctorPatients(user.id),
+        getFormerPatients(user.id),
+      ]);
       setPatients(patientsData);
+      setFormerPatients(formerData);
     } catch (err) {
       setError('Failed to load patients');
       console.error(err);
@@ -138,13 +145,36 @@ export function PatientsListPage() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      <div className="flex gap-2 mb-6">
+        <button onClick={() => setActiveTab('current')} className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === 'current' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-300 text-gray-700'}`}>
+          Current ({patients.length})
+        </button>
+        <button onClick={() => setActiveTab('former')} className={`px-4 py-2 rounded-lg text-sm font-medium ${activeTab === 'former' ? 'bg-gray-900 text-white' : 'bg-white border border-gray-300 text-gray-700'}`}>
+          Former ({formerPatients.length})
+        </button>
+      </div>
+
+      {activeTab === 'former' ? (
+        <div className="space-y-3">
+          {formerPatients.length === 0 ? (
+            <div className="rounded-xl bg-white p-8 text-center text-gray-600 border border-gray-200">No former patients</div>
+          ) : formerPatients.map((fp) => (
+            <div key={fp.patientId} onClick={() => navigate(`/doctor/patients/${fp.patientId}`)} className="rounded-xl bg-white border border-gray-200 p-5 cursor-pointer hover:shadow-md transition-all">
+              <p className="font-semibold text-gray-900">{fp.name}</p>
+              <p className="text-sm text-gray-500">{fp.email}</p>
+              {fp.diagnosis && <p className="text-sm text-gray-600 mt-2 line-clamp-2">{fp.diagnosis}</p>}
+              {fp.leftAt && <p className="text-xs text-gray-400 mt-1">Left {new Date(fp.leftAt).toLocaleDateString()}</p>}
+            </div>
+          ))}
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Patients</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">{patients.length}</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{patients.length + formerPatients.length}</p>
             </div>
             <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
               <Users className="w-6 h-6 text-blue-600" />
@@ -407,6 +437,8 @@ export function PatientsListPage() {
           <div className="text-gray-600">Last Updated</div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

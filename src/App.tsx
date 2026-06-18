@@ -25,6 +25,8 @@ import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import DoctorProfilePagePatient from './pages/patient/DoctorProfilePage';
 import ReviewDoctorPage from './pages/patient/ReviewDoctorPage';
+import { PatientFindDoctorPage } from './pages/patient/PatientFindDoctorPage';
+import { DoctorTransferRequestsPage } from './pages/doctor/DoctorTransferRequestsPage';
 
 function App() {
   return (
@@ -226,6 +228,26 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <DoctorProfilePagePatient />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/transfer-requests"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <DoctorTransferRequestsPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/patient/find-doctor"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <PatientFindDoctorPage />
                 </MainLayout>
               </ProtectedRoute>
             }

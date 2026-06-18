@@ -39,13 +39,16 @@ export function PatientDashboard() {
     }
   };
 
-  const currentPlan = dashboardData.find((p) => p.planStatus === 'Active') ?? dashboardData[0];
+  const currentPlan =
+    dashboardData.find((p) => !p.isArchived && p.planStatus === 'Active') ??
+    dashboardData.find((p) => !p.isArchived) ??
+    dashboardData[0];
 
   // Calculate actual stats from API data
   const totalExercises = currentPlan?.exercises?.length || 0;
   const completedExercises = currentPlan?.exercises?.filter(e => e.completed).length || 0;
   const todayExercises = currentPlan?.exercises?.filter(e => e.started && !e.completed).length || 0;
-  const activePlans = dashboardData.filter(p => p.planStatus === 'Active').length;
+  const activePlans = dashboardData.filter((p) => !p.isArchived && p.planStatus === 'Active').length;
 
   if (isLoading) {
     return (

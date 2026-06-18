@@ -10,6 +10,8 @@ export interface PatientProfile {
   diagnosisFileUrl?: string;
   profilePicture?: string;
   doctorId?: number;
+  hasDoctor?: boolean;
+  formerDoctorId?: number;
   dateOfBirth?: string;
   createdAt?: string;
 }
@@ -75,8 +77,12 @@ export async function updatePatientPassword(
 
 export async function getAttendingDoctor(patientId: number): Promise<AttendingDoctor | null> {
   try {
-    const response = await apiClient.get<AttendingDoctor>(`/Patient/${patientId}/doctor`);
-    return response.data;
+    const response = await apiClient.get<AttendingDoctor | { hasDoctor: false }>(`/Patient/${patientId}/doctor`);
+    const data = response.data;
+    if (data && typeof data === 'object' && 'hasDoctor' in data && !data.hasDoctor) {
+      return null;
+    }
+    return data as AttendingDoctor;
   } catch {
     return null;
   }

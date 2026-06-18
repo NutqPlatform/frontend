@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getDoctorProfile } from '../../services/api/doctor.api';
 import type { DoctorProfile } from '../../services/api/doctor.api';
+import { getPatientProfile } from '../../services/api/patient.api';
 import { resolveMediaUrl } from '../../utils/mediaUrl';
 import doctorReviewAPI from '../../services/api/doctor-review.api';
 import type { DoctorRatingDto } from '../../services/api/doctor-review.api';
-import { Mail, Phone, MapPin, FileText, User } from 'lucide-react';
+import { Mail, Phone, MapPin, FileText, User, ArrowLeft } from 'lucide-react';
 
 export default function DoctorProfilePage() {
   const { doctorId } = useParams<{ doctorId: string }>();
+  const navigate = useNavigate();
   const [doctor, setDoctor] = useState<DoctorProfile | null>(null);
   const [rating, setRating] = useState<DoctorRatingDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +20,7 @@ export default function DoctorProfilePage() {
   const [myRating, setMyRating] = useState<number>(5);
   const [myComment, setMyComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canReview, setCanReview] = useState(false);
 
   useEffect(() => {
     if (!doctorId) return;
@@ -26,12 +29,16 @@ export default function DoctorProfilePage() {
       try {
         setLoading(true);
         const id = parseInt(doctorId, 10);
-        const [profileData, reviewData] = await Promise.all([
+        const [profileData, reviewData, patientProfile] = await Promise.all([
           getDoctorProfile(id),
           doctorReviewAPI.getDoctorReviews(id),
+          user?.role === 'patient' && user.id ? getPatientProfile(user.id) : Promise.resolve(null),
         ]);
         setDoctor(profileData);
         setRating(reviewData);
+        if (patientProfile) {
+          setCanReview(patientProfile.doctorId === id || patientProfile.formerDoctorId === id);
+        }
         if (user && reviewData) {
           const mine = reviewData.reviews.find(r => r.patientId === user.id);
           if (mine) {
@@ -55,6 +62,13 @@ export default function DoctorProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto py-8">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900"
+      >
+        <ArrowLeft size={18} /> Back
+      </button>
       <div className="bg-white rounded-lg shadow p-6 mb-8">
         <div className="flex items-start gap-6 mb-6">
           {doctor.profilePicture ? (
@@ -152,7 +166,7 @@ export default function DoctorProfilePage() {
 
       {/* Reviews */}
       <div>
-        {user?.role === 'patient' && (
+        {user?.role === 'patient' && canReview && (
           <div className="bg-white rounded-lg shadow p-4 mb-6">
             <h2 className="text-lg font-semibold mb-2">Your Review</h2>
             <div className="flex items-center gap-3 mb-2">

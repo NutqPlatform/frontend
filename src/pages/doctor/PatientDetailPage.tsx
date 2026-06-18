@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { getPatientDetails, getPatientPlans, updatePatientDiagnosis, deleteExerciseFromPlan, updatePlanStatus, getPlanProgress } from '../../services/api/patients.api';
+import { getPatientDetails, getPatientPlans, updatePatientDiagnosis, deleteExerciseFromPlan, updatePlanStatus, updatePlan, getPlanProgress } from '../../services/api/patients.api';
+import { releasePatient, doctorInitiateTransfer } from '../../services/api/transfer.api';
+import { getAllDoctorsWithCommunications } from '../../services/api/doctor.api';
 import { createWeeklyReport, updateWeeklyReport, getReportByPlan } from '../../services/api/weeklyReport.api';
 import type { PatientDetails, TherapyPlan } from '../../services/api/patients.api';
 import { resolveMediaUrl } from '../../utils/mediaUrl';
@@ -9,6 +11,12 @@ import {
   User, Calendar, Activity, Target, FileText, Plus, Edit2, 
   Trash2, CheckCircle, AlertCircle, ChevronRight, X 
 } from 'lucide-react';
+
+function addDaysToDateString(dateStr: string, days: number): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split('T')[0];
+}
 
 export function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -26,9 +34,8 @@ export function PatientDetailPage() {
   const [diagnosisFileName, setDiagnosisFileName] = useState<string | null>(null);
   const [planForm, setPlanForm] = useState({
     description: '',
-    status: 'Active',
     startDate: new Date().toISOString().split('T')[0],
-    endDate: '',
+    endDate: addDaysToDateString(new Date().toISOString().split('T')[0], 7),
   });
   const [planProgress, setPlanProgress] = useState<Record<number, number>>({});
   const [reportsByPlan, setReportsByPlan] = useState<Record<number, any>>({});
@@ -37,6 +44,11 @@ export function PatientDetailPage() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportNotes, setReportNotes] = useState('');
   const [isSavingReport, setIsSavingReport] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferDoctorId, setTransferDoctorId] = useState('');
+  const [transferMessage, setTransferMessage] = useState('');
+  const [allDoctors, setAllDoctors] = useState<{ id: number; name: string }[]>([]);
+  const [isFormerPatient, setIsFormerPatient] = useState(false);
 
   useEffect(() => {
     if (user?.id && user?.role === 'doctor' && id) {
@@ -62,6 +74,7 @@ export function PatientDetailPage() {
       
       const patientData = await getPatientDetails(user.id, patientId);
       setPatient(patientData);
+      setIsFormerPatient(!!(patientData as any).isFormer);
       setDiagnosisValue(patientData.diagnosis || '');
       
       try {
@@ -132,7 +145,6 @@ export function PatientDetailPage() {
       state: {
         planDraft: {
           description: planForm.description,
-          status: planForm.status,
           startDate: planForm.startDate,
           endDate: planForm.endDate || undefined,
         },
@@ -191,6 +203,15 @@ export function PatientDetailPage() {
       await loadPatientData();
     } catch (err: any) {
       setError(err?.response?.data?.error || 'Failed to update plan status');
+    }
+  };
+
+  const handleUpdatePlanEndDate = async (planId: number, endDate: string) => {
+    try {
+      await updatePlan(planId, { endDate });
+      await loadPatientData();
+    } catch (err: any) {
+      setError(err?.response?.data?.error || 'Failed to update plan end date');
     }
   };
 
@@ -287,9 +308,38 @@ export function PatientDetailPage() {
             <p className="mt-2 text-gray-600">Manage therapy plans and track progress for {patient.name}</p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-600">
-              Patient ID: #{patient.id}
-            </div>
+            {!isFormerPatient && (
+              <>
+                <button
+                  onClick={async () => {
+                    if (!user?.id || !id || !confirm('Release patient? Plans archived, patient unassigned.')) return;
+                    try {
+                      await releasePatient(user.id, parseInt(id));
+                      navigate('/doctor/patients');
+                    } catch (err: any) {
+                      setError(err?.response?.data?.error || 'Release failed');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-lg border border-amber-300 text-amber-800 text-sm font-medium hover:bg-amber-50"
+                >
+                  Release Patient
+                </button>
+                <button
+                  onClick={async () => {
+                    const docs = await getAllDoctorsWithCommunications();
+                    setAllDoctors(docs.filter((d) => d.id !== user?.id).map((d) => ({ id: d.id, name: d.name })));
+                    setShowTransferModal(true);
+                  }}
+                  className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800"
+                >
+                  Transfer to Doctor
+                </button>
+              </>
+            )}
+            {isFormerPatient && (
+              <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium">Former Patient (read-only)</span>
+            )}
+            <div className="text-sm text-gray-600">Patient ID: #{patient.id}</div>
           </div>
         </div>
       </div>
@@ -470,6 +520,7 @@ export function PatientDetailPage() {
               <h2 className="text-2xl font-bold text-gray-900">Therapy Plans</h2>
               <p className="text-gray-600 mt-1">Manage treatment plans and track patient progress</p>
             </div>
+            {!isFormerPatient && (
             <button
               onClick={() => setShowAddPlanForm(!showAddPlanForm)}
               className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-gray-800 transition-all"
@@ -477,10 +528,11 @@ export function PatientDetailPage() {
               <Plus size={18} />
               New Plan
             </button>
+            )}
           </div>
 
           {/* Add Plan Form */}
-          {showAddPlanForm && (
+          {showAddPlanForm && !isFormerPatient && (
             <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200 animate-slide-down">
               <h3 className="text-lg font-semibold text-gray-900 mb-6">Create New Therapy Plan</h3>
               <form onSubmit={handleProceedToExerciseSelection} className="space-y-6">
@@ -498,36 +550,32 @@ export function PatientDetailPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                    <select
-                      value={planForm.status}
-                      onChange={(e) => setPlanForm({ ...planForm, status: e.target.value })}
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                    >
-                      <option value="Active">Active</option>
-                      <option value="Paused">Paused</option>
-                      <option value="Completed">Completed</option>
-                    </select>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                     <input
                       type="date"
                       value={planForm.startDate}
-                      onChange={(e) => setPlanForm({ ...planForm, startDate: e.target.value })}
+                      onChange={(e) => {
+                        const startDate = e.target.value;
+                        setPlanForm({
+                          ...planForm,
+                          startDate,
+                          endDate: addDaysToDateString(startDate, 7),
+                        });
+                      }}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">End Date (default +1 week)</label>
                     <input
                       type="date"
                       value={planForm.endDate}
                       onChange={(e) => setPlanForm({ ...planForm, endDate: e.target.value })}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                      required
                     />
                   </div>
                 </div>
@@ -609,6 +657,15 @@ export function PatientDetailPage() {
                     </div>
                     
                     <div className="flex items-center gap-2">
+                      {!isFormerPatient ? (
+                      <>
+                      <input
+                        type="date"
+                        value={plan.endDate ? new Date(plan.endDate).toISOString().split('T')[0] : ''}
+                        onChange={(e) => handleUpdatePlanEndDate(plan.id, e.target.value)}
+                        className="text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 font-medium hover:bg-gray-50 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                        title="End date"
+                      />
                       <select
                         value={plan.status}
                         onChange={(e) => handleUpdatePlanStatus(plan.id, e.target.value)}
@@ -619,6 +676,10 @@ export function PatientDetailPage() {
                         <option value="Completed">Completed</option>
                         <option value="Ended">Ended</option>
                       </select>
+                      </>
+                      ) : (
+                        <span className="text-xs text-gray-500">Archived plans</span>
+                      )}
                     </div>
                   </div>
 
@@ -826,6 +887,39 @@ export function PatientDetailPage() {
                   )}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showTransferModal && user?.id && id && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Transfer to Another Doctor</h3>
+            <select value={transferDoctorId} onChange={(e) => setTransferDoctorId(e.target.value)} className="w-full border rounded-lg px-3 py-2 mb-3">
+              <option value="">Select doctor</option>
+              {allDoctors.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+            <textarea value={transferMessage} onChange={(e) => setTransferMessage(e.target.value)} placeholder="Optional message for receiving doctor" rows={3} className="w-full border rounded-lg px-3 py-2 mb-4 text-sm" />
+            <div className="flex gap-2">
+              <button
+                onClick={async () => {
+                  if (!transferDoctorId) return;
+                  try {
+                    await doctorInitiateTransfer(user.id, parseInt(id), parseInt(transferDoctorId), transferMessage || undefined);
+                    setShowTransferModal(false);
+                    navigate('/doctor/patients');
+                  } catch (err: any) {
+                    setError(err?.response?.data?.error || 'Transfer failed');
+                  }
+                }}
+                className="flex-1 py-2 bg-gray-900 text-white rounded-lg text-sm"
+              >
+                Send Transfer Request
+              </button>
+              <button onClick={() => setShowTransferModal(false)} className="flex-1 py-2 border rounded-lg text-sm">Cancel</button>
             </div>
           </div>
         </div>

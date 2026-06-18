@@ -7,6 +7,7 @@ import {
   updatePatientPassword,
   getAttendingDoctor,
 } from '../../services/api/patient.api';
+import { leaveDoctor } from '../../services/api/transfer.api';
 import type { PatientProfile, AttendingDoctor } from '../../services/api/patient.api';
 import { User, Camera, Lock, AlertCircle } from 'lucide-react';
 
@@ -38,6 +39,7 @@ export function PatientProfilePage() {
     dateOfBirth: '',
   });
   const [isUpdatingInfo, setIsUpdatingInfo] = useState(false);
+  const [leavingDoctor, setLeavingDoctor] = useState(false);
 
   useEffect(() => {
     if (user?.role && user.role !== 'patient') {
@@ -370,16 +372,49 @@ export function PatientProfilePage() {
         </div>
 
         <div className="space-y-6">
-          {doctor && (
+          {doctor ? (
             <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-3">Your Physician</h3>
               <p className="font-medium text-gray-900">{doctor.name}</p>
               <p className="text-sm text-gray-600">{doctor.email}</p>
-              <button
-                onClick={() => navigate('/doctors')}
-                className="w-full mt-4 py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 font-medium hover:bg-blue-100 transition-colors text-sm"
-              >
-                View All Doctors & Communications
+              <div className="flex flex-col gap-2 mt-4">
+                <button onClick={() => navigate(`/patient/doctor/${doctor.id}/profile`)} className="w-full py-2 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 font-medium hover:bg-blue-100 text-sm">
+                  View Doctor Profile
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!user?.id || !confirm('Leave your doctor? Plans will be archived.')) return;
+                    setLeavingDoctor(true);
+                    try {
+                      await leaveDoctor(user.id);
+                      await loadProfile();
+                    } catch (err: any) {
+                      setError(err?.response?.data?.error || 'Failed to leave doctor');
+                    } finally {
+                      setLeavingDoctor(false);
+                    }
+                  }}
+                  disabled={leavingDoctor}
+                  className="w-full py-2 rounded-lg border border-red-200 text-red-700 font-medium hover:bg-red-50 text-sm disabled:opacity-50"
+                >
+                  {leavingDoctor ? 'Leaving...' : 'Leave Doctor'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-amber-50 p-6 border border-amber-200">
+              <h3 className="font-semibold text-gray-900 mb-2">No Assigned Doctor</h3>
+              <p className="text-sm text-gray-600 mb-4">Find a new doctor and submit transfer request</p>
+              <button onClick={() => navigate('/patient/find-doctor')} className="w-full py-2 rounded-lg bg-gray-900 text-white font-medium text-sm">
+                Find Doctor
+              </button>
+            </div>
+          )}
+          {!doctor && profile.formerDoctorId && (
+            <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-2">Review Former Doctor</h3>
+              <button onClick={() => navigate(`/patient/doctor/${profile.formerDoctorId}/review`)} className="w-full py-2 rounded-lg border border-gray-300 text-gray-700 text-sm hover:bg-gray-50">
+                Leave Review
               </button>
             </div>
           )}

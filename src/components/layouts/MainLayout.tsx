@@ -21,6 +21,7 @@ export function MainLayout({ children }: MainLayoutProps) {
     { label: 'Dashboard', icon: <Home size={20} />, path: '/doctor', roles: ['doctor'] },
     { label: 'Doctors', icon: <Users size={20} />, path: '/doctors', roles: ['doctor'] },
     { label: 'Patients', icon: <Users size={20} />, path: '/doctor/patients', roles: ['doctor'] },
+    { label: 'Transfers', icon: <Users size={20} />, path: '/doctor/transfer-requests', roles: ['doctor'] },
     { label: 'Plans', icon: <FileText size={20} />, path: '/doctor/plans', roles: ['doctor'] },
     { label: 'Exercises', icon: <Dumbbell size={20} />, path: '/doctor/exercises', roles: ['doctor'] },
     { label: 'Profile', icon: <User size={20} />, path: '/doctor/profile', roles: ['doctor'] },
@@ -29,6 +30,7 @@ export function MainLayout({ children }: MainLayoutProps) {
   const patientNavItems = [
   { label: 'Dashboard', icon: <Home size={20} />, path: '/dashboard', roles: ['patient'] },
   { label: 'My Plans', icon: <FileText size={20} />, path: '/patient/plans', roles: ['patient'] },
+  { label: 'Browse Doctors', icon: <Users size={20} />, path: '/patient/find-doctor', roles: ['patient'] },
   { label: 'Weekly Reports', icon: <Activity size={20} />, path: '/patient/reports', roles: ['patient'] }, // Changed from "Progress"
   { label: 'Profile', icon: <User size={20} />, path: '/patient/profile', roles: ['patient'] },
 ];

@@ -38,6 +38,8 @@ export function PatientPlansPage() {
   };
 
   const filteredPlans = plans.filter(plan => {
+    if (activeFilter === 'archived') return plan.isArchived;
+    if (plan.isArchived) return false;
     if (activeFilter === 'all') return true;
     if (activeFilter === 'active') return plan.planStatus === 'Active';
     if (activeFilter === 'completed') return plan.planStatus === 'Completed';
@@ -140,6 +142,16 @@ export function PatientPlansPage() {
         >
           Paused
         </button>
+        <button
+          onClick={() => setActiveFilter('archived')}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${
+            activeFilter === 'archived'
+              ? 'bg-gray-900 text-white'
+              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+          }`}
+        >
+          Archived
+        </button>
       </div>
 
       {/* Plans List */}
@@ -195,7 +207,9 @@ export function PatientPlansPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className={`px-3 py-1.5 rounded-full text-sm font-medium ${
-                    plan.planStatus === 'Active'
+                    plan.isArchived
+                      ? 'bg-slate-100 text-slate-700'
+                      : plan.planStatus === 'Active'
                       ? 'bg-green-100 text-green-700'
                       : plan.planStatus === 'Completed'
                       ? 'bg-blue-100 text-blue-700'
@@ -203,8 +217,9 @@ export function PatientPlansPage() {
                       ? 'bg-yellow-100 text-yellow-700'
                       : 'bg-gray-100 text-gray-700'
                   }`}>
-                    {plan.planStatus}
+                    {plan.isArchived ? 'Archived' : plan.planStatus}
                   </span>
+                  {!plan.isArchived && (
                   <button
                     onClick={() => {
                       const availableExercise = plan.exercises?.find(e => !e.completed);
@@ -219,6 +234,7 @@ export function PatientPlansPage() {
                     <Play size={16} />
                     {plan.exercises?.some(e => !e.completed) ? 'Continue' : 'Review'}
                   </button>
+                  )}
                 </div>
               </div>
 
@@ -299,12 +315,16 @@ export function PatientPlansPage() {
                           </div>
                         )}
                         
+                        {!plan.isArchived ? (
                         <button
                           onClick={() => navigate(`/patient/exercise/${plan.planId}/${ex.planExerciseId}`)}
                           className="w-full py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-colors text-sm"
                         >
                           {ex.completed ? 'Review Exercise' : 'Start Practice'}
                         </button>
+                        ) : (
+                        <p className="text-xs text-gray-500 text-center py-2">Statistics preserved from archived plan</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -321,7 +341,7 @@ export function PatientPlansPage() {
           <div className="rounded-xl bg-white p-4 border border-gray-200">
             <div className="text-sm text-gray-600 mb-1">Active Plans</div>
             <div className="text-2xl font-bold text-gray-900">
-              {plans.filter(p => p.planStatus === 'Active').length}
+              {plans.filter(p => !p.isArchived && p.planStatus === 'Active').length}
             </div>
           </div>
           <div className="rounded-xl bg-white p-4 border border-gray-200">

@@ -11,6 +11,8 @@ export interface PatientDetails {
   phoneNumber?: string;
   dateOfBirth?: string;
   createdAt?: string;
+  isFormer?: boolean;
+  leftAt?: string;
 }
 
 export interface PlanExercise {
@@ -127,6 +129,18 @@ export async function updatePlanStatus(
   status: string
 ): Promise<void> {
   await apiClient.put(`/TherapyPlan/plan/${planId}/status`, { status });
+}
+
+// Update plan details (e.g. end date)
+export async function updatePlan(
+  planId: number,
+  updates: { description?: string; endDate?: string }
+): Promise<TherapyPlan> {
+  const response = await apiClient.put<TherapyPlan>(`/TherapyPlan/plan/${planId}`, {
+    description: updates.description,
+    endDate: updates.endDate,
+  });
+  return response.data;
 }
 
 // Get plan progress

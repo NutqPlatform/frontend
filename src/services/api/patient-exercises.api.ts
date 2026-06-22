@@ -30,6 +30,16 @@ export interface VocabularyDto {
 
 export type ExerciseState = 'not_started' | 'started' | 'completed';
 
+export interface SpeechAttemptData {
+  attemptNumber: number;
+  expectedWord: string;
+  recognizedWord: string;
+  similarityScore: number;
+  isCorrect: boolean;
+  audioDurationSeconds: number;
+  attemptedAt: string;
+}
+
 // Rich analytics for AI/doctor analysis
 export interface WordAttemptData {
   wordId: number;
@@ -39,6 +49,7 @@ export interface WordAttemptData {
   audioPlays: number;
   firstTryCorrect: boolean;
   timeSpentSeconds: number;
+  speechAttempts?: SpeechAttemptData[];
 }
 
 export interface RepetitionData {
@@ -124,4 +135,54 @@ export function deriveExerciseState(progressList: ExerciseProgressDto[], planExe
   if (!prog) return 'not_started';
   if (prog.completed) return 'completed';
   return 'started';
+}
+
+export interface SpeechAttemptSummaryDto {
+  attemptNumber: number;
+  expectedWord: string;
+  recognizedWord: string;
+  similarityScore: number;
+  isCorrect: boolean;
+  audioDurationSeconds: number;
+  attemptedAt: string;
+}
+
+export interface WordSessionPerformanceDto {
+  vocabularyId?: number;
+  expectedWord: string;
+  wordEnglish: string;
+  wordArabic: string;
+  totalAttempts: number;
+  firstAttemptCorrect: boolean;
+  bestSimilarityScore: number;
+  averageSimilarityScore: number;
+  succeeded: boolean;
+  attempts: SpeechAttemptSummaryDto[];
+}
+
+export interface PatientExerciseSessionAnalyticsDto {
+  trainingSessionId: number;
+  exerciseProgressId: number;
+  exerciseName: string;
+  startTime: string;
+  endTime: string;
+  totalDurationSeconds: number;
+  wordsCompleted: number;
+  firstAttemptCorrectCount: number;
+  accuracyPercent: number;
+  firstAttemptSuccessRate: number;
+  averageSimilarityScore: number;
+  words: WordSessionPerformanceDto[];
+  strengthAreas: string[];
+  weaknessAreas: string[];
+}
+
+export async function getExerciseSessionAnalytics(
+  patientId: number,
+  planExerciseId: number
+): Promise<PatientExerciseSessionAnalyticsDto> {
+  const response = await apiClient.get<PatientExerciseSessionAnalyticsDto>(
+    `/patient-exercises/${patientId}/exercises/${planExerciseId}/session-analytics`
+  );
+  return response.data;
 }

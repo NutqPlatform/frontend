@@ -9,7 +9,7 @@ import type { PatientDetails, TherapyPlan } from '../../services/api/patients.ap
 import { resolveMediaUrl } from '../../utils/mediaUrl';
 import { 
   User, Calendar, Activity, Target, FileText, Plus, Edit2, 
-  Trash2, CheckCircle, AlertCircle, ChevronRight, X 
+  Trash2, CheckCircle, AlertCircle, ChevronRight, X, LineChart
 } from 'lucide-react';
 
 function addDaysToDateString(dateStr: string, days: number): string {
@@ -216,6 +216,10 @@ export function PatientDetailPage() {
   };
 
   const handleSaveReport = async (planId: number) => {
+    if (isFormerPatient) {
+      setError('Reports cannot be created or edited for former patients.');
+      return;
+    }
     if (!user?.id || !reportNotes.trim()) {
       setError('Please add notes for the report');
       return;
@@ -339,6 +343,13 @@ export function PatientDetailPage() {
             {isFormerPatient && (
               <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 text-sm font-medium">Former Patient (read-only)</span>
             )}
+            <button
+              onClick={() => navigate(`/doctor/patients/${patient.id}/analytics`)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <LineChart size={16} />
+              Progress Analytics
+            </button>
             <div className="text-sm text-gray-600">Patient ID: #{patient.id}</div>
           </div>
         </div>
@@ -607,7 +618,10 @@ export function PatientDetailPage() {
                 <Calendar className="w-8 h-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">No Therapy Plans</h3>
-              <p className="text-gray-600 mb-6">Start by creating your first therapy plan</p>
+              <p className="text-gray-600 mb-6">
+                {isFormerPatient ? 'No archived therapy plans on record' : 'Start by creating your first therapy plan'}
+              </p>
+              {!isFormerPatient && (
               <button
                 onClick={() => setShowAddPlanForm(true)}
                 className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-white font-medium hover:bg-gray-800 transition-all"
@@ -615,6 +629,7 @@ export function PatientDetailPage() {
                 <Plus size={18} />
                 Create First Plan
               </button>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
@@ -705,7 +720,7 @@ export function PatientDetailPage() {
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-4">
                       <h4 className="font-medium text-gray-900">Exercises</h4>
-                      {plan.status === 'Active' && (
+                      {plan.status === 'Active' && !isFormerPatient && (
                         <button
                           onClick={() => navigate(`/doctor/patients/${id}/plans/${plan.id}/exercises/add`)}
                           className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
@@ -739,7 +754,7 @@ export function PatientDetailPage() {
                                 </div>
                               </div>
                             </div>
-                            {plan.status === 'Active' && (
+                            {plan.status === 'Active' && !isFormerPatient && (
                               <button
                                 onClick={() => handleDeleteExercise(plan.id, exercise.id)}
                                 className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
@@ -760,7 +775,7 @@ export function PatientDetailPage() {
                   </div>
 
                   {/* Weekly Report Section */}
-                  {(plan.status === 'Completed' || plan.status === 'Paused' || plan.status === 'Ended') && (
+                  {!isFormerPatient && (plan.status === 'Completed' || plan.status === 'Paused' || plan.status === 'Ended') && (
                     <div className="border-t border-gray-200 pt-4">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-medium text-gray-900 flex items-center gap-2">
@@ -806,6 +821,22 @@ export function PatientDetailPage() {
                           </div>
                         </div>
                       )}
+                    </div>
+                  )}
+                  {isFormerPatient && reportsByPlan[plan.id] && (
+                    <div className="border-t border-gray-200 pt-4">
+                      <h4 className="font-medium text-gray-900 flex items-center gap-2 mb-3">
+                        <FileText size={16} />
+                        Weekly Report (read-only)
+                      </h4>
+                      <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                          {reportsByPlan[plan.id].doctorNotes}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Updated: {new Date(reportsByPlan[plan.id].endDate).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

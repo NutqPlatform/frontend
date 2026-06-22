@@ -13,6 +13,7 @@ import { PatientReportsPage } from './pages/patient/PatientReportsPage';
 import { PronounceWordExercisePage } from './pages/patient/PronounceWordExercisePage';
 import { PatientsListPage } from './pages/doctor/PatientsListPage';
 import { PatientDetailPage } from './pages/doctor/PatientDetailPage';
+import { PatientAnalyticsDashboardPage } from './pages/doctor/PatientAnalyticsDashboardPage';
 import { PlanExerciseSelectionPage } from './pages/doctor/PlanExerciseSelectionPage';
 import { InvitationCodePage } from './pages/doctor/InvitationCodePage';
 import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
@@ -96,6 +97,16 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <PlanExerciseSelectionPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/patients/:patientId/analytics"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <PatientAnalyticsDashboardPage />
                 </MainLayout>
               </ProtectedRoute>
             }

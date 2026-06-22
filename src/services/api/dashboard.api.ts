@@ -29,6 +29,39 @@ export interface DoctorAnalyticsDto {
   averageCompletionRate: number;
 }
 
+export interface TrendResultDto {
+  delta: number;
+  direction: string;
+}
+
+export interface CategoryScoreEntryDto {
+  category: string;
+  accuracyPercent: number;
+}
+
+export interface SessionTimelineEntryDto {
+  trainingSessionId: number;
+  startTime: string;
+  endTime: string;
+  overallScore: number;
+  categoryScores: CategoryScoreEntryDto[];
+}
+
+export interface CategoryTrendEntryDto {
+  category: string;
+  delta: number;
+  direction: string;
+  firstSessionScore: number;
+  lastSessionScore: number;
+}
+
+export interface PatientLongitudinalAnalyticsDto {
+  patientId: number;
+  overallTrend: TrendResultDto;
+  sessionTimeline: SessionTimelineEntryDto[];
+  categoryTrends: CategoryTrendEntryDto[];
+}
+
 // Doctor Patient Types
 export interface Patient {
   id: number;
@@ -60,6 +93,16 @@ export async function getPatientDashboard(patientId: number): Promise<PatientDas
 // Doctor Analytics API
 export async function getDoctorAnalytics(doctorId: number): Promise<DoctorAnalyticsDto> {
   const response = await apiClient.get<DoctorAnalyticsDto>(`/doctor-analytics/${doctorId}`);
+  return response.data;
+}
+
+export async function getPatientLongitudinalAnalytics(
+  doctorId: number,
+  patientId: number
+): Promise<PatientLongitudinalAnalyticsDto> {
+  const response = await apiClient.get<PatientLongitudinalAnalyticsDto>(
+    `/doctors/${doctorId}/patients/${patientId}/analytics`
+  );
   return response.data;
 }
 
@@ -101,6 +144,6 @@ export interface OngoingPlan {
 }
 
 export async function getOngoingPlans(doctorId: number): Promise<OngoingPlan[]> {
-  const response = await apiClient.get<OngoingPlan[]>(`/TherapyPlan/doctor/${doctorId}/plans/all`);
+  const response = await apiClient.get<OngoingPlan[]>(`/TherapyPlan/doctor/${doctorId}/ongoing-plans`);
   return response.data;
 }

@@ -9,11 +9,13 @@ import {
   completeRepetition as apiCompleteRepetition,
   getPatientProgress,
   deriveExerciseState,
+  getExerciseSessionAnalytics,
   type VocabularyDto,
   type ExerciseState,
   type ExerciseProgressDto,
   type PlanExerciseDto,
   type RepetitionData,
+  type PatientExerciseSessionAnalyticsDto,
 } from '../../services/api/patient-exercises.api';
 import {
   ExerciseStateBadge,
@@ -42,6 +44,8 @@ export function PronounceWordExercisePage() {
   // Accumulate repetition data for analytics — stored in a ref so it
   // never causes re-renders and never gets reset by loadData()
   const allRepetitionDataRef = useRef<RepetitionData[]>([]);
+  const [sessionAnalytics, setSessionAnalytics] = useState<PatientExerciseSessionAnalyticsDto | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   const isCardMatchGame =
     planExercise?.exercise?.category?.toLowerCase() === 'tools' ||
@@ -76,6 +80,25 @@ export function PronounceWordExercisePage() {
   }, [user?.id, user?.role, planExerciseIdNum, planIdNum, navigate]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const loadSessionAnalytics = useCallback(async () => {
+    if (!user?.id || !planExerciseIdNum) return;
+    setAnalyticsLoading(true);
+    try {
+      const data = await getExerciseSessionAnalytics(user.id, planExerciseIdNum);
+      setSessionAnalytics(data);
+    } catch {
+      setSessionAnalytics(null);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  }, [user?.id, planExerciseIdNum]);
+
+  useEffect(() => {
+    if ((showCelebration || exerciseState === 'completed') && user?.id && planExerciseIdNum) {
+      loadSessionAnalytics();
+    }
+  }, [showCelebration, exerciseState, user?.id, planExerciseIdNum, loadSessionAnalytics]);
 
   const handleStart = async () => {
     if (!user?.id || !planExerciseIdNum) return;
@@ -127,6 +150,14 @@ export function PronounceWordExercisePage() {
     if (!user?.id || !planExerciseIdNum) return;
     setIsCompleting(true);
     setError(null);
+    if (sessionData) {
+      try {
+        const parsed = JSON.parse(sessionData);
+        if (parsed.repetitions?.length > 0) {
+          allRepetitionDataRef.current = parsed.repetitions;
+        }
+      } catch { /* ignore */ }
+    }
     try {
       await apiCompleteExercise(
         user.id,
@@ -136,6 +167,7 @@ export function PronounceWordExercisePage() {
       setExerciseState('completed');
       setShowCelebration(true);
       await loadData();
+      await loadSessionAnalytics();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to complete exercise');
     } finally {
@@ -185,6 +217,9 @@ export function PronounceWordExercisePage() {
         vocabulary={vocabulary}
         currentRepetition={celebrationRepetition}
         totalRepetitions={currentProgress?.totalRepetitions || 1}
+        sessionStartedAt={currentProgress?.startTime}
+        sessionAnalytics={sessionAnalytics}
+        analyticsLoading={analyticsLoading}
         onRepetitionComplete={handleCompleteRepetition}
         onExerciseComplete={handleComplete}
         isCompleted={true}
@@ -196,6 +231,9 @@ export function PronounceWordExercisePage() {
         vocabulary={vocabulary}
         currentRepetition={currentProgress?.currentRepetition || 1}
         totalRepetitions={currentProgress?.totalRepetitions || 1}
+        sessionStartedAt={currentProgress?.startTime}
+        sessionAnalytics={sessionAnalytics}
+        analyticsLoading={analyticsLoading}
         onRepetitionComplete={handleCompleteRepetition}
         onExerciseComplete={handleComplete}
         isCompleted={true}
@@ -212,6 +250,9 @@ export function PronounceWordExercisePage() {
         vocabulary={vocabulary}
         currentRepetition={currentProgress.currentRepetition}
         totalRepetitions={currentProgress.totalRepetitions}
+        sessionStartedAt={currentProgress.startTime}
+        sessionAnalytics={sessionAnalytics}
+        analyticsLoading={analyticsLoading}
         onRepetitionComplete={handleCompleteRepetition}
         onExerciseComplete={handleComplete}
         allRepetitionData={allRepetitionDataRef.current}
@@ -221,6 +262,9 @@ export function PronounceWordExercisePage() {
         vocabulary={vocabulary}
         currentRepetition={currentProgress.currentRepetition}
         totalRepetitions={currentProgress.totalRepetitions}
+        sessionStartedAt={currentProgress.startTime}
+        sessionAnalytics={sessionAnalytics}
+        analyticsLoading={analyticsLoading}
         onRepetitionComplete={handleCompleteRepetition}
         onExerciseComplete={handleComplete}
         allRepetitionData={allRepetitionDataRef.current}

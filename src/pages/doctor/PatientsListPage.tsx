@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { getDoctorPatients } from '../../services/api/dashboard.api';
 import { getFormerPatients, type FormerPatient } from '../../services/api/transfer.api';
 import type { Patient } from '../../services/api/dashboard.api';
-import { Users, UserPlus, Search, Filter, Calendar, Activity, ChevronRight, Mail, User as UserIcon, MoreVertical, AlertCircle, Phone } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Calendar, Activity, ChevronRight, Mail, User as UserIcon, MoreVertical, AlertCircle, Phone, LineChart } from 'lucide-react';
 import { resolveMediaUrl } from '../../utils/mediaUrl';
 
 export function PatientsListPage() {
@@ -169,7 +169,7 @@ export function PatientsListPage() {
         </div>
       ) : (
       <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
@@ -180,55 +180,35 @@ export function PatientsListPage() {
               <Users className="w-6 h-6 text-blue-600" />
             </div>
           </div>
-          <div className="mt-4 text-xs text-gray-500 flex items-center gap-1">
-            <span className="text-green-600">↑ 12%</span>
-            <span>from last month</span>
+          <div className="mt-4 text-xs text-gray-500">
+            {patients.length} current · {formerPatients.length} former
           </div>
         </div>
 
         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Plans</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {patients.length}
-              </p>
+              <p className="text-sm text-gray-600">Current Patients</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{patients.length}</p>
             </div>
             <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
               <Activity className="w-6 h-6 text-green-600" />
             </div>
           </div>
-          <div className="mt-4 text-xs text-gray-500">Currently ongoing</div>
+          <div className="mt-4 text-xs text-gray-500">Assigned to you</div>
         </div>
 
         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Avg Progress</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">78%</p>
+              <p className="text-sm text-gray-600">Former Patients</p>
+              <p className="text-3xl font-bold text-gray-900 mt-2">{formerPatients.length}</p>
             </div>
-            <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
+            <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+              <UserIcon className="w-6 h-6 text-gray-600" />
             </div>
           </div>
-          <div className="mt-4 text-xs text-gray-500">Across all patients</div>
-        </div>
-
-        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Satisfaction</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">4.8</p>
-            </div>
-            <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
-              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-              </svg>
-            </div>
-          </div>
-          <div className="mt-4 text-xs text-gray-500">Out of 5.0</div>
+          <div className="mt-4 text-xs text-gray-500">Released or transferred</div>
         </div>
       </div>
 
@@ -384,16 +364,16 @@ export function PatientsListPage() {
                     </div>
                     
                     <div className="mt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700">Progress</span>
-                        <span className="text-sm font-semibold text-gray-900">65%</span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                        <div
-                          className="h-full bg-gradient-to-r from-gray-900 to-gray-700 rounded-full transition-all duration-500"
-                          style={{ width: '65%' }}
-                        />
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/doctor/patients/${patient.id}/analytics`);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      >
+                        <LineChart size={14} />
+                        View Progress Analytics
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -417,24 +397,16 @@ export function PatientsListPage() {
       )}
 
       {/* Footer Stats */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <div className="rounded-lg bg-gray-50 p-4 text-center">
           <div className="font-medium text-gray-900">{filteredPatients.length}</div>
-          <div className="text-gray-600">Patients</div>
+          <div className="text-gray-600">Showing Patients</div>
         </div>
         <div className="rounded-lg bg-gray-50 p-4 text-center">
           <div className="font-medium text-gray-900">
             {filteredPatients.filter(shouldShowActive).length}
           </div>
           <div className="text-gray-600">Active</div>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-4 text-center">
-          <div className="font-medium text-gray-900">78%</div>
-          <div className="text-gray-600">Avg Progress</div>
-        </div>
-        <div className="rounded-lg bg-gray-50 p-4 text-center">
-          <div className="font-medium text-gray-900">24h</div>
-          <div className="text-gray-600">Last Updated</div>
         </div>
       </div>
       </>

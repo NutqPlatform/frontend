@@ -248,7 +248,7 @@ export function PlansPage() {
             <div>
               <p className="text-sm text-gray-600">Reports</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                {Object.values(reportsByPlan).filter(r => r !== null).length}
+                {Object.values(reportsByPlan).filter((r) => r?.id).length}
               </p>
             </div>
             <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
@@ -526,7 +526,7 @@ export function PlansPage() {
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold">
-                  {Object.values(reportsByPlan).filter(r => r !== null).length}
+                  {Object.values(reportsByPlan).filter((r) => r?.id).length}
                 </div>
                 <div className="text-sm text-gray-300">Reports</div>
               </div>

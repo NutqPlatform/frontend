@@ -1,11 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { VocabularyDto, WordAttemptData, RepetitionData } from '../../services/api/patient-exercises.api';
+import type { VocabularyDto, WordAttemptData, RepetitionData, PatientExerciseSessionAnalyticsDto } from '../../services/api/patient-exercises.api';
 import { Volume2, CheckCircle, XCircle } from 'lucide-react';
+import {
+  buildSessionPayload,
+  computeOverallAccuracy,
+  createEmptyWordAttempt,
+  getExpectedWord,
+  recordSpeechAttempt,
+} from '../../utils/sessionAnalytics';
 
 interface CardMatchExerciseProps {
   vocabulary: VocabularyDto[];
   currentRepetition: number;
   totalRepetitions: number;
+  sessionStartedAt?: string;
+  sessionAnalytics?: PatientExerciseSessionAnalyticsDto | null;
+  analyticsLoading?: boolean;
   onRepetitionComplete: (sessionData?: string) => Promise<void>;
   onExerciseComplete: (score?: number, sessionData?: string) => Promise<void>;
   isCompleted?: boolean;
@@ -43,6 +53,7 @@ export function CardMatchExercise({
   vocabulary,
   currentRepetition,
   totalRepetitions,
+  sessionStartedAt,
   onRepetitionComplete,
   onExerciseComplete,
   isCompleted = false,
@@ -60,23 +71,19 @@ export function CardMatchExercise({
   const wordStartTimeRef = useRef<number>(Date.now());
   const repStartTimeRef = useRef<number>(Date.now());
 
-  // Analytics tracking per word in this repetition
   const wordDataRef = useRef<Map<number, WordAttemptData>>(new Map());
+  const sessionStartedAtRef = useRef<string>(sessionStartedAt ?? new Date().toISOString());
 
   const target = targetSequence[sequenceIndex] ?? null;
+
+  useEffect(() => {
+    if (sessionStartedAt) sessionStartedAtRef.current = sessionStartedAt;
+  }, [sessionStartedAt]);
 
   // Initialize rep analytics
   const initWordData = useCallback((words: VocabularyDto[]) => {
     const map = new Map<number, WordAttemptData>();
-    words.forEach(w => map.set(w.id, {
-      wordId: w.id,
-      wordEnglish: w.wordEnglish,
-      wordArabic: w.wordArabic,
-      attempts: 0,
-      audioPlays: 0,
-      firstTryCorrect: false,
-      timeSpentSeconds: 0,
-    }));
+    words.forEach(w => map.set(w.id, createEmptyWordAttempt(w)));
     wordDataRef.current = map;
     repStartTimeRef.current = Date.now();
     wordStartTimeRef.current = Date.now();
@@ -160,10 +167,8 @@ export function CardMatchExercise({
       if (isLastWord) {
         const repData = buildRepetitionData();
         const allData = [...allRepetitionData, repData];
-        const overallAccuracy = allData.length > 0
-          ? Math.round(allData.reduce((s, r) => s + r.accuracyPercent, 0) / allData.length)
-          : 0;
-        const sessionJson = JSON.stringify({ exerciseType: 'card_match', repetitions: allData, overallAccuracyPercent: overallAccuracy });
+        const overallAccuracy = computeOverallAccuracy(allData);
+        const sessionJson = buildSessionPayload('card_match', allData, sessionStartedAtRef.current);
 
         if (currentRepetition < totalRepetitions) {
           await onRepetitionComplete(sessionJson);
@@ -181,21 +186,28 @@ export function CardMatchExercise({
   };
 
   const handleChoice = (choice: VocabularyDto) => {
-    if (feedbackState === 'correct' || isAdvancing) return;
+    if (feedbackState === 'correct' || isAdvancing || !target) return;
 
-    // Track attempt
-    if (target) {
-      const d = wordDataRef.current.get(target.id);
-      if (d) {
-        d.attempts++;
-        if (d.attempts === 1 && choice.id === target.id) d.firstTryCorrect = true;
-        wordDataRef.current.set(target.id, d);
-      }
+    const isCorrect = choice.id === target.id;
+    const expectedWord = getExpectedWord(target.wordEnglish, target.wordArabic);
+    const recognizedWord = getExpectedWord(choice.wordEnglish, choice.wordArabic);
+    const attemptDuration = Math.max(0, (Date.now() - wordStartTimeRef.current) / 1000);
+
+    const d = wordDataRef.current.get(target.id);
+    if (d) {
+      recordSpeechAttempt(d, {
+        expectedWord,
+        recognizedWord,
+        similarityScore: isCorrect ? 100 : 0,
+        isCorrect,
+        audioDurationSeconds: attemptDuration,
+      });
+      wordDataRef.current.set(target.id, d);
     }
 
     setSelectedCardId(choice.id);
 
-    if (choice.id === target?.id) {
+    if (isCorrect) {
       setFeedbackState('correct');
       playTone(880, 'triangle', 0.3, 0.15);
       setTimeout(advanceRound, 800);

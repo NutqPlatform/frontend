@@ -1,13 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { VocabularyDto, WordAttemptData, RepetitionData } from '../../services/api/patient-exercises.api';
+import type { VocabularyDto, WordAttemptData, RepetitionData, PatientExerciseSessionAnalyticsDto } from '../../services/api/patient-exercises.api';
 import { Volume2, ChevronLeft, ChevronRight, CheckCircle, Mic } from 'lucide-react';
 import { startSpeechRecognition, evaluatePronunciation, isSpeechRecognitionSupported } from '../../utils/speechRecognition';
 import { ExerciseFeedbackSummary } from './ExerciseFeedbackSummary';
+import {
+  buildSessionPayload,
+  computeOverallAccuracy,
+  createEmptyWordAttempt,
+  getExpectedWord,
+  recordSpeechAttempt,
+} from '../../utils/sessionAnalytics';
 
 interface PhotoFrameExerciseProps {
   vocabulary: VocabularyDto[];
   currentRepetition: number;
   totalRepetitions: number;
+  sessionStartedAt?: string;
+  sessionAnalytics?: PatientExerciseSessionAnalyticsDto | null;
+  analyticsLoading?: boolean;
   onRepetitionComplete: (sessionData?: string) => Promise<void>;
   onExerciseComplete: (score?: number, sessionData?: string) => Promise<void>;
   isCompleted?: boolean;
@@ -26,6 +36,9 @@ export function PhotoFrameExercise({
   vocabulary,
   currentRepetition,
   totalRepetitions,
+  sessionStartedAt,
+  sessionAnalytics = null,
+  analyticsLoading = false,
   onRepetitionComplete,
   onExerciseComplete,
   isCompleted = false,
@@ -49,6 +62,8 @@ export function PhotoFrameExercise({
   const wordStartTimeRef = useRef<number>(Date.now());
   const repStartTimeRef = useRef<number>(Date.now());
   const wordDataRef = useRef<Map<number, WordAttemptData>>(new Map());
+  const recordingStartRef = useRef<number>(0);
+  const sessionStartedAtRef = useRef<string>(sessionStartedAt ?? new Date().toISOString());
 
   const currentWord = vocabulary[currentIndex];
   const progress = vocabulary.length > 0 ? ((currentIndex + 1) / vocabulary.length) * 100 : 0;
@@ -59,18 +74,14 @@ export function PhotoFrameExercise({
     setSpeechSupported(isSpeechRecognitionSupported());
   }, []);
 
+  useEffect(() => {
+    if (sessionStartedAt) sessionStartedAtRef.current = sessionStartedAt;
+  }, [sessionStartedAt]);
+
   // Init analytics per repetition
   useEffect(() => {
     const map = new Map<number, WordAttemptData>();
-    vocabulary.forEach(w => map.set(w.id, {
-      wordId: w.id,
-      wordEnglish: w.wordEnglish,
-      wordArabic: w.wordArabic,
-      attempts: 0,
-      audioPlays: 0,
-      firstTryCorrect: true,
-      timeSpentSeconds: 0,
-    }));
+    vocabulary.forEach(w => map.set(w.id, createEmptyWordAttempt(w)));
     wordDataRef.current = map;
     repStartTimeRef.current = Date.now();
     wordStartTimeRef.current = Date.now();
@@ -145,6 +156,7 @@ export function PhotoFrameExercise({
     
     setIsRecording(true);
     setSpeechFeedback(null);
+    recordingStartRef.current = Date.now();
     
     try {
       const result = await startSpeechRecognition('ar-SA');
@@ -155,6 +167,8 @@ export function PhotoFrameExercise({
         true,
         accuracyThreshold
       );
+      const audioDurationSeconds = (Date.now() - recordingStartRef.current) / 1000;
+      const expectedWord = getExpectedWord(currentWord.wordEnglish, currentWord.wordArabic);
       
       setSpeechFeedback({
         text: feedback.recognized,
@@ -164,15 +178,15 @@ export function PhotoFrameExercise({
       });
       setShowingFeedback(true);
       
-      // Track the attempt
       const d = wordDataRef.current.get(currentWord.id);
       if (d) {
-        d.attempts++;
-        if (d.attempts === 1 && feedback.isCorrect) {
-          d.firstTryCorrect = true;
-        } else if (d.attempts > 1) {
-          d.firstTryCorrect = false;
-        }
+        recordSpeechAttempt(d, {
+          expectedWord,
+          recognizedWord: feedback.recognized,
+          similarityScore: feedback.accuracy,
+          isCorrect: feedback.isCorrect,
+          audioDurationSeconds,
+        });
         wordDataRef.current.set(currentWord.id, d);
       }
 
@@ -203,6 +217,20 @@ export function PhotoFrameExercise({
         }, 2000);
       }
     } catch (err) {
+      const audioDurationSeconds = (Date.now() - recordingStartRef.current) / 1000;
+      const expectedWord = getExpectedWord(currentWord.wordEnglish, currentWord.wordArabic);
+      const d = wordDataRef.current.get(currentWord.id);
+      if (d) {
+        recordSpeechAttempt(d, {
+          expectedWord,
+          recognizedWord: '',
+          similarityScore: 0,
+          isCorrect: false,
+          audioDurationSeconds,
+        });
+        wordDataRef.current.set(currentWord.id, d);
+      }
+
       setSpeechFeedback({
         text: '',
         accuracy: 0,
@@ -219,9 +247,18 @@ export function PhotoFrameExercise({
     if (!currentWord) return;
     recordTimeForWord();
     setConfirmedWords(prev => new Set([...prev, currentWord.id]));
-    // Track as practiced
     const d = wordDataRef.current.get(currentWord.id);
-    if (d) { d.attempts = Math.max(d.attempts, 1); wordDataRef.current.set(currentWord.id, d); }
+    if (d && (!d.speechAttempts || d.speechAttempts.length === 0)) {
+      const expectedWord = getExpectedWord(currentWord.wordEnglish, currentWord.wordArabic);
+      recordSpeechAttempt(d, {
+        expectedWord,
+        recognizedWord: expectedWord,
+        similarityScore: 100,
+        isCorrect: true,
+        audioDurationSeconds: Math.max(0, (Date.now() - wordStartTimeRef.current) / 1000),
+      });
+      wordDataRef.current.set(currentWord.id, d);
+    }
   };
 
   const handleNext = () => {
@@ -261,10 +298,8 @@ export function PhotoFrameExercise({
     try {
       const repData = buildRepetitionData();
       const allData = [...allRepetitionData, repData];
-      const overallAccuracy = allData.length > 0
-        ? Math.round(allData.reduce((s, r) => s + r.accuracyPercent, 0) / allData.length)
-        : 100;
-      const sessionJson = JSON.stringify({ exerciseType: 'photo_frame', repetitions: allData, overallAccuracyPercent: overallAccuracy });
+      const overallAccuracy = computeOverallAccuracy(allData);
+      const sessionJson = buildSessionPayload('photo_frame', allData, sessionStartedAtRef.current);
 
       if (currentRepetition === totalRepetitions) {
         await onExerciseComplete(overallAccuracy, sessionJson);
@@ -280,21 +315,28 @@ export function PhotoFrameExercise({
 
   // Completion screen - show detailed feedback summary
   if (isCompleted) {
-    const allData = allRepetitionData;
-    const overallAccuracy = allData.length > 0
-      ? Math.round(allData.reduce((s, r) => s + r.accuracyPercent, 0) / allData.length)
+    const totalDuration = sessionAnalytics?.totalDurationSeconds ?? 0;
+    const overallAccuracy = sessionAnalytics
+      ? Math.round(sessionAnalytics.accuracyPercent)
       : 100;
-    const totalDuration = allData.reduce((s, r) => s + r.durationSeconds, 0);
 
-    if (showDetailedFeedback) {
+    if (showDetailedFeedback && sessionAnalytics) {
       return (
         <ExerciseFeedbackSummary
-          allRepetitionData={allData}
-          vocabulary={vocabulary}
-          totalDuration={totalDuration}
-          overallAccuracy={overallAccuracy}
+          sessionAnalytics={sessionAnalytics}
           onClose={onPracticeAgain}
         />
+      );
+    }
+
+    if (analyticsLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-emerald-950 via-teal-950 to-slate-900 flex items-center justify-center p-6">
+          <div className="text-center text-white">
+            <div className="w-10 h-10 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-emerald-300">Loading session analytics...</p>
+          </div>
+        </div>
       );
     }
 
@@ -310,12 +352,12 @@ export function PhotoFrameExercise({
 
           <div className="grid grid-cols-3 gap-3 mb-6">
             <div className="bg-white/10 rounded-2xl p-4">
-              <div className="text-3xl font-bold text-white">{vocabulary.length}</div>
+              <div className="text-3xl font-bold text-white">{sessionAnalytics?.wordsCompleted ?? vocabulary.length}</div>
               <div className="text-emerald-300 text-xs mt-1">Words</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-4">
-              <div className="text-3xl font-bold text-white">{totalRepetitions}</div>
-              <div className="text-emerald-300 text-xs mt-1">Rounds</div>
+              <div className="text-3xl font-bold text-white">{Math.round(sessionAnalytics?.firstAttemptSuccessRate ?? 0)}%</div>
+              <div className="text-emerald-300 text-xs mt-1">First Try</div>
             </div>
             <div className="bg-white/10 rounded-2xl p-4">
               <div className="text-3xl font-bold text-white">{overallAccuracy}%</div>
@@ -323,20 +365,25 @@ export function PhotoFrameExercise({
             </div>
           </div>
 
-          {allData.length > 0 && (
+          {sessionAnalytics && (
             <div className="bg-white/5 rounded-2xl p-4 mb-6 text-left">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-emerald-300 text-sm">Round breakdown:</p>
-                <span className="text-xs text-emerald-400 font-semibold">Total: {Math.round(totalDuration / 60)}m {totalDuration % 60}s</span>
+                <p className="text-emerald-300 text-sm">Session stats</p>
+                <span className="text-xs text-emerald-400 font-semibold">
+                  Total: {Math.floor(totalDuration / 60)}m {totalDuration % 60}s · Avg similarity {Math.round(sessionAnalytics.averageSimilarityScore)}%
+                </span>
               </div>
-              <div className="space-y-2">
-                {allData.map(r => (
-                  <div key={r.repetitionNumber} className="flex items-center gap-3">
-                    <span className="text-white/60 text-sm w-16">Round {r.repetitionNumber}</span>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {sessionAnalytics.words.map((w) => (
+                  <div key={w.vocabularyId ?? w.expectedWord} className="flex items-center gap-3">
+                    <span className="text-white/60 text-sm w-20 truncate">{w.wordEnglish}</span>
                     <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full" style={{ width: `${r.accuracyPercent}%` }} />
+                      <div
+                        className={`h-full rounded-full ${w.succeeded ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                        style={{ width: `${w.bestSimilarityScore}%` }}
+                      />
                     </div>
-                    <span className="text-white text-sm w-16 text-right">{r.durationSeconds}s</span>
+                    <span className="text-white/80 text-xs w-16 text-right">{w.totalAttempts} try · {Math.round(w.bestSimilarityScore)}%</span>
                   </div>
                 ))}
               </div>
@@ -346,7 +393,8 @@ export function PhotoFrameExercise({
           <div className="flex flex-col gap-3">
             <button
               onClick={() => setShowDetailedFeedback(true)}
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-lg hover:opacity-90 transition-all"
+              disabled={!sessionAnalytics}
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold text-lg hover:opacity-90 transition-all disabled:opacity-40"
             >
               📊 View Detailed Feedback
             </button>

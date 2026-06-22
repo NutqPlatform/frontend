@@ -34,8 +34,8 @@ export async function updateWeeklyReport(id: number, dto: WeeklyReportCreateDto)
 export async function getReportByPlan(planId: number): Promise<WeeklyReportDto | null> {
   try {
     const resp = await apiClient.get<WeeklyReportDto | null>(`/weekly-reports/plan/${planId}`);
-    return resp.data;
-  } catch (err) {
+    return resp.data?.id ? resp.data : null;
+  } catch {
     return null;
   }
 }

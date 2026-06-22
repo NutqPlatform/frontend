@@ -5,8 +5,8 @@ import { getDoctorAnalytics, getOngoingPlans, getDoctorPatients } from '../../se
 import type { DoctorAnalyticsDto, OngoingPlan, Patient } from '../../services/api/dashboard.api';
 import { 
   Users, FileText, Activity, TrendingUp, 
-  Calendar, Target,
-  Clock, CheckCircle, User, ChevronRight, Play
+  Target,
+  Clock, CheckCircle, User, ChevronRight, Play, LineChart
 } from 'lucide-react';
 
 export function StatisticsPage() {
@@ -242,42 +242,56 @@ export function StatisticsPage() {
             )}
           </div>
 
-          {/* Patient Activity Chart */}
+          {/* Patient Training Analytics */}
           <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Patient Progress</h2>
-                <p className="text-sm text-gray-600 mt-1">Exercise completion rates over time</p>
+                <h2 className="text-xl font-bold text-gray-900">Training Progress Analytics</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  View longitudinal session progress and category trends per patient
+                </p>
               </div>
-              <Calendar className="w-5 h-5 text-gray-400" />
+              <LineChart className="w-5 h-5 text-gray-400" />
             </div>
-            
-            {/* Simple Progress Chart */}
-            <div className="space-y-4">
-              {patients.slice(0, 5).map((patient) => {
-                // Derive real progress from ongoing plans for the patient
-                const patientPlans = plans.filter(p => p.patientId === patient.id && p.progressPercentage !== undefined);
-                const progress = patientPlans.length > 0
-                  ? patientPlans.reduce((sum, p) => sum + (p.progressPercentage ?? 0), 0) / patientPlans.length
-                  : 0;
-                const progressPercent = Math.min(100, Math.max(0, Number(progress.toFixed(1))));
 
-                return (
-                  <div key={patient.id} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-gray-700">{patient.name}</span>
-                      <span className="text-sm text-gray-600">{progressPercent}%</span>
+            {patients.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <User size={24} className="text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Patients Yet</h3>
+                <p className="text-gray-600">Invite patients to start tracking training progress</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {patients.slice(0, 5).map((patient) => (
+                  <div
+                    key={patient.id}
+                    className="flex items-center justify-between rounded-lg border border-gray-200 p-4 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">{patient.name}</p>
+                      <p className="text-sm text-gray-600">{patient.email}</p>
                     </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
-                      <div
-                        className="h-full bg-gray-900 rounded-full transition-all duration-500"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
+                    <button
+                      onClick={() => navigate(`/doctor/patients/${patient.id}/analytics`)}
+                      className="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
+                    >
+                      View Analytics
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
-                );
-              })}
-            </div>
+                ))}
+                {patients.length > 5 && (
+                  <button
+                    onClick={() => navigate('/doctor/patients')}
+                    className="w-full py-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+                  >
+                    View all patients →
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -385,7 +399,6 @@ export function StatisticsPage() {
           
         </div>
       </div>
-
       {/* Bottom metrics removed — no reliable backend endpoints available to compute these. */}
     </div>
   );

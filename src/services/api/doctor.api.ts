@@ -102,3 +102,53 @@ export async function getSingleDoctor(
   const response = await apiClient.get<DoctorWithCommunications>(`/Doctor/${doctorId}/communications`);
   return response.data;
 }
+
+// ─── Reviews ────────────────────────────────────────────────────────────────
+
+export interface DoctorReview {
+  id: number;
+  doctorId: number;
+  patientId: number;
+  patientName?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
+export interface DoctorRatingData {
+  doctorId: number;
+  averageRating: number;
+  totalReviews: number;
+  reviews: DoctorReview[];
+}
+
+export interface CreateReviewRequest {
+  doctorId: number;
+  patientId: number;
+  rating: number;
+  comment?: string;
+}
+
+export async function getDoctorReviews(doctorId: number): Promise<DoctorRatingData> {
+  const response = await apiClient.get<DoctorRatingData>(`/DoctorReview/doctor/${doctorId}`);
+  return response.data;
+}
+
+export async function createDoctorReview(request: CreateReviewRequest): Promise<DoctorReview> {
+  const response = await apiClient.post<DoctorReview>('/DoctorReview', request);
+  return response.data;
+}
+
+export async function updateDoctorReview(
+  doctorId: number,
+  patientId: number,
+  rating: number,
+  comment?: string
+): Promise<DoctorReview> {
+  const response = await apiClient.put<DoctorReview>(`/DoctorReview/${doctorId}/${patientId}`, { rating, comment });
+  return response.data;
+}
+
+export async function deleteDoctorReview(doctorId: number, patientId: number): Promise<void> {
+  await apiClient.delete(`/DoctorReview/${doctorId}/${patientId}`);
+}

@@ -3,7 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getAllExercises, addExerciseToPlan } from '../../services/api/exercises.api';
 import type { Exercise } from '../../services/api/exercises.api';
-import { createPlan } from '../../services/api/patients.api';
+import { createPlan, getPatientDetails } from '../../services/api/patients.api';
 import type { PlanExerciseInput } from '../../services/api/patients.api';
 import { resolveMediaUrl } from '../../utils/mediaUrl';
 import { ArrowLeft, Search, Activity, Check, AlertCircle } from 'lucide-react';
@@ -35,6 +35,7 @@ export function PlanExerciseSelectionPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isFormerPatient, setIsFormerPatient] = useState(false);
 
   useEffect(() => {
     if (!user?.id || user.role !== 'doctor') {
@@ -52,7 +53,22 @@ export function PlanExerciseSelectionPage() {
 
     const load = async () => {
       setIsLoading(true);
+      setError(null);
       try {
+        const idVal = parseInt(patientId || '', 10);
+        if (isNaN(idVal)) {
+          setError('Invalid patient ID');
+          setIsLoading(false);
+          return;
+        }
+
+        // Check if patient is former
+        const patientData = await getPatientDetails(user.id, idVal);
+        if (patientData.isFormer) {
+          setIsFormerPatient(true);
+          setError('This patient is no longer assigned to you. Plans and exercises cannot be modified.');
+        }
+
         const data = await getAllExercises();
         setExercises(data);
         const initial: Record<number, ExerciseSelection> = {};
@@ -60,8 +76,8 @@ export function PlanExerciseSelectionPage() {
           initial[ex.id] = { selected: false, repetition: 1, durationMinutes: 30 };
         });
         setSelections(initial);
-      } catch {
-        setError('Failed to load exercises');
+      } catch (err: any) {
+        setError(err?.response?.data?.error || err?.message || 'Failed to load exercises');
       } finally {
         setIsLoading(false);
       }
@@ -96,6 +112,7 @@ export function PlanExerciseSelectionPage() {
   const totalExerciseSlots = selectedExercises.reduce((sum, ex) => sum + ex.repetition, 0);
 
   const toggleExercise = (exerciseId: number) => {
+    if (isFormerPatient) return;
     setSelections((prev) => ({
       ...prev,
       [exerciseId]: {
@@ -106,6 +123,7 @@ export function PlanExerciseSelectionPage() {
   };
 
   const updateSelection = (exerciseId: number, updates: Partial<ExerciseSelection>) => {
+    if (isFormerPatient) return;
     setSelections((prev) => ({
       ...prev,
       [exerciseId]: { ...prev[exerciseId], ...updates },
@@ -113,6 +131,7 @@ export function PlanExerciseSelectionPage() {
   };
 
   const handleSubmit = async () => {
+    if (isFormerPatient) return;
     if (!user?.id || !patientId || selectedExercises.length === 0) {
       setError('Select at least one exercise for the plan.');
       return;
@@ -197,6 +216,7 @@ export function PlanExerciseSelectionPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search exercises..."
           className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+          disabled={isFormerPatient}
         />
       </div>
 
@@ -216,6 +236,7 @@ export function PlanExerciseSelectionPage() {
                 type="button"
                 onClick={() => toggleExercise(exercise.id)}
                 className="w-full text-left"
+                disabled={isFormerPatient}
               >
                 <div className="h-40 bg-gray-100 relative overflow-hidden">
                   {imageSrc ? (
@@ -261,6 +282,7 @@ export function PlanExerciseSelectionPage() {
                         })
                       }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      disabled={isFormerPatient}
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Repetition {selection.repetition} adds {selection.repetition} separate entries of this exercise.
@@ -279,6 +301,7 @@ export function PlanExerciseSelectionPage() {
                         })
                       }
                       className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                      disabled={isFormerPatient}
                     />
                   </div>
                 </div>
@@ -305,7 +328,7 @@ export function PlanExerciseSelectionPage() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSubmitting || selectedExercises.length === 0}
+            disabled={isSubmitting || selectedExercises.length === 0 || isFormerPatient}
             className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-gray-900 text-white font-medium hover:bg-gray-800 disabled:opacity-50"
           >
             {isSubmitting

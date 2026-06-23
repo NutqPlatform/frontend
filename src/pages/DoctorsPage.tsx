@@ -7,7 +7,7 @@ import {
   type DoctorPatient,
   type DoctorWeeklyReport,
 } from '../services/api/doctor.api';
-import { Search, Users, Layers, ChevronDown, ChevronUp, Phone, MapPin } from 'lucide-react';
+import { Search, Users, Layers, ChevronDown, ChevronUp, Phone, MapPin, Star } from 'lucide-react';
 import { resolveMediaUrl } from '../utils/mediaUrl';
 
 export function DoctorsPage() {
@@ -109,6 +109,7 @@ export function DoctorsPage() {
               const yourReports: DoctorWeeklyReport[] = (doctor.weeklyReports ?? []).filter(
                 (report) => report.patientId === (user?.id ?? 0)
               );
+              const isSelf = user && user.role === 'doctor' && user.id === doctor.id;
 
               return (
                 <div
@@ -134,7 +135,25 @@ export function DoctorsPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-blue-600 hover:text-blue-700">{doctor.name}</p>
-                          <p className="text-sm text-gray-500">{doctor.email}</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-gray-500">{doctor.email}</span>
+                            {doctor.averageRating && doctor.averageRating > 0 ? (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <div className="flex items-center gap-0.5">
+                                  <Star size={12} className="fill-amber-400 text-amber-400" />
+                                  <span className="text-xs font-semibold text-amber-600">
+                                    {doctor.averageRating.toFixed(1)}
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-gray-300">•</span>
+                                <span className="text-xs text-gray-400">No reviews</span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -193,69 +212,71 @@ export function DoctorsPage() {
                           </div>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Layers className="w-4 h-4 text-gray-500" />
-                            <h4 className="text-sm font-semibold text-gray-900">Patients</h4>
-                          </div>
-                          {doctor.patients && doctor.patients.length > 0 ? (
-                            <ul className="space-y-2">
-                              {doctor.patients.map((patient: DoctorPatient) => (
-                                <li
-                                  key={patient.id}
-                                  className="flex items-center justify-between rounded-lg border border-gray-100 p-3"
-                                >
-                                  <div>
-                                    <p className="font-medium text-gray-900">{patient.name}</p>
-                                    <p className="text-xs text-gray-500">{patient.email}</p>
-                                  </div>
-                                  <span className="text-xs text-gray-500">Age: {patient.age ?? '—'}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="text-sm text-gray-500">No patients assigned yet.</p>
-                          )}
-                        </div>
-
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Layers className="w-4 h-4 text-gray-500" />
-                            <h4 className="text-sm font-semibold text-gray-900">Communication Reports</h4>
-                          </div>
-                          {doctor.weeklyReports && doctor.weeklyReports.length > 0 ? (
-                            <div className="space-y-2">
-                              {doctor.weeklyReports.slice(0, 5).map((report) => (
-                                <div
-                                  key={report.id}
-                                  className="rounded-lg border border-gray-100 p-3"
-                                >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div>
-                                      <p className="text-xs text-gray-500">{report.patientName ?? 'Patient'}</p>
-                                      <p className="font-medium text-gray-900">
-                                        {formatDate(report.startDate)} - {formatDate(report.endDate)}
-                                      </p>
-                                    </div>
-                                    <span className="text-xs text-gray-500">{report.totalHours}h</span>
-                                  </div>
-                                  {report.aiSummary ? (
-                                    <p className="mt-2 text-sm text-gray-600">{report.aiSummary}</p>
-                                  ) : (
-                                    <p className="mt-2 text-sm text-gray-500">No summary available.</p>
-                                  )}
-                                </div>
-                              ))}
-                              {doctor.weeklyReports.length > 5 && (
-                                <p className="text-xs text-gray-500">Showing latest 5 reports.</p>
-                              )}
+                      {isSelf && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Layers className="w-4 h-4 text-gray-500" />
+                              <h4 className="text-sm font-semibold text-gray-900">Patients</h4>
                             </div>
-                          ) : (
-                            <p className="text-sm text-gray-500">No communication reports available.</p>
-                          )}
+                            {doctor.patients && doctor.patients.length > 0 ? (
+                              <ul className="space-y-2">
+                                {doctor.patients.map((patient: DoctorPatient) => (
+                                  <li
+                                    key={patient.id}
+                                    className="flex items-center justify-between rounded-lg border border-gray-100 p-3"
+                                  >
+                                    <div>
+                                      <p className="font-medium text-gray-900">{patient.name}</p>
+                                      <p className="text-xs text-gray-500">{patient.email}</p>
+                                    </div>
+                                    <span className="text-xs text-gray-500">Age: {patient.age ?? '—'}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : (
+                              <p className="text-sm text-gray-500">No patients assigned yet.</p>
+                            )}
+                          </div>
+
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Layers className="w-4 h-4 text-gray-500" />
+                              <h4 className="text-sm font-semibold text-gray-900">Communication Reports</h4>
+                            </div>
+                            {doctor.weeklyReports && doctor.weeklyReports.length > 0 ? (
+                              <div className="space-y-2">
+                                {doctor.weeklyReports.slice(0, 5).map((report) => (
+                                  <div
+                                    key={report.id}
+                                    className="rounded-lg border border-gray-100 p-3"
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div>
+                                        <p className="text-xs text-gray-500">{report.patientName ?? 'Patient'}</p>
+                                        <p className="font-medium text-gray-900">
+                                          {formatDate(report.startDate)} - {formatDate(report.endDate)}
+                                        </p>
+                                      </div>
+                                      <span className="text-xs text-gray-500">{report.totalHours}h</span>
+                                    </div>
+                                    {report.aiSummary ? (
+                                      <p className="mt-2 text-sm text-gray-600">{report.aiSummary}</p>
+                                    ) : (
+                                      <p className="mt-2 text-sm text-gray-500">No summary available.</p>
+                                    )}
+                                  </div>
+                                ))}
+                                {doctor.weeklyReports.length > 5 && (
+                                  <p className="text-xs text-gray-500">Showing latest 5 reports.</p>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-gray-500">No communication reports available.</p>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {yourReports.length > 0 && (
                         <div className="mt-6 rounded-lg bg-blue-50 p-4">

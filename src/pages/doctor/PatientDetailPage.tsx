@@ -429,7 +429,7 @@ export function PatientDetailPage() {
                     <Target className="w-4 h-4" />
                     Diagnosis
                   </h3>
-                  {!isEditingDiagnosis && (
+                  {!isEditingDiagnosis && !isFormerPatient && (
                     <button
                       onClick={() => setIsEditingDiagnosis(true)}
                       className="text-xs text-gray-500 hover:text-gray-700"
@@ -457,7 +457,7 @@ export function PatientDetailPage() {
                     <div className="flex gap-2">
                       <button
                         onClick={handleUpdateDiagnosis}
-                        disabled={isUpdatingDiagnosis}
+                        disabled={isUpdatingDiagnosis || isFormerPatient}
                         className="flex-1 text-sm rounded-lg bg-gray-900 px-3 py-2 text-white font-medium hover:bg-gray-800 disabled:opacity-50"
                       >
                         {isUpdatingDiagnosis ? 'Saving...' : 'Save'}
@@ -780,20 +780,29 @@ export function PatientDetailPage() {
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-medium text-gray-900 flex items-center gap-2">
                           <FileText size={16} />
-                          Weekly Report
+                          Weekly Report & Analytics
                         </h4>
-                        <button
-                          onClick={() => {
-                            const report = reportsByPlan[plan.id];
-                            setSelectedPlanId(plan.id);
-                            setSelectedReport(report || null);
-                            setReportNotes((report?.doctorNotes as string) || '');
-                            setShowReportModal(true);
-                          }}
-                          className="flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white font-medium hover:bg-gray-800"
-                        >
-                          {reportsByPlan[plan.id] ? 'Edit Report' : 'Add Report'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => navigate(`/doctor/patients/${id}/plans/${plan.id}/analytics`)}
+                            className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                          >
+                            <LineChart size={16} />
+                            Analytics
+                          </button>
+                          <button
+                            onClick={() => {
+                              const report = reportsByPlan[plan.id];
+                              setSelectedPlanId(plan.id);
+                              setSelectedReport(report || null);
+                              setReportNotes((report?.doctorNotes as string) || '');
+                              setShowReportModal(true);
+                            }}
+                            className="flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white font-medium hover:bg-gray-800 transition-colors"
+                          >
+                            {reportsByPlan[plan.id] ? 'Edit Report' : 'Add Report'}
+                          </button>
+                        </div>
                       </div>
                       
                       {reportsByPlan[plan.id] ? (
@@ -823,20 +832,32 @@ export function PatientDetailPage() {
                       )}
                     </div>
                   )}
-                  {isFormerPatient && reportsByPlan[plan.id] && (
+                  {isFormerPatient && (plan.status === 'Completed' || plan.status === 'Paused' || plan.status === 'Ended') && (
                     <div className="border-t border-gray-200 pt-4">
-                      <h4 className="font-medium text-gray-900 flex items-center gap-2 mb-3">
-                        <FileText size={16} />
-                        Weekly Report (read-only)
-                      </h4>
-                      <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                          {reportsByPlan[plan.id].doctorNotes}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Updated: {new Date(reportsByPlan[plan.id].endDate).toLocaleDateString()}
-                        </p>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-medium text-gray-900 flex items-center gap-2">
+                          <LineChart size={16} />
+                          Plan Analytics
+                        </h4>
+                        <button
+                          onClick={() => navigate(`/doctor/patients/${id}/plans/${plan.id}/analytics`)}
+                          className="flex items-center gap-2 rounded-lg bg-gray-900 px-3 py-2 text-sm text-white font-medium hover:bg-gray-800 transition-colors"
+                        >
+                          <LineChart size={16} />
+                          View Analytics
+                        </button>
                       </div>
+                      {reportsByPlan[plan.id] && (
+                        <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 mt-2">
+                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Weekly Report (read-only)</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                            {reportsByPlan[plan.id].doctorNotes}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Updated: {new Date(reportsByPlan[plan.id].endDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

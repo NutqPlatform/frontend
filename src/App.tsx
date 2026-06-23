@@ -14,6 +14,7 @@ import { PronounceWordExercisePage } from './pages/patient/PronounceWordExercise
 import { PatientsListPage } from './pages/doctor/PatientsListPage';
 import { PatientDetailPage } from './pages/doctor/PatientDetailPage';
 import { PatientAnalyticsDashboardPage } from './pages/doctor/PatientAnalyticsDashboardPage';
+import { PlanAnalyticsDashboardPage } from './pages/doctor/PlanAnalyticsDashboardPage';
 import { PlanExerciseSelectionPage } from './pages/doctor/PlanExerciseSelectionPage';
 import { InvitationCodePage } from './pages/doctor/InvitationCodePage';
 import { DoctorProfilePage } from './pages/doctor/DoctorProfilePage';
@@ -97,6 +98,16 @@ function App() {
               <ProtectedRoute>
                 <MainLayout>
                   <PlanExerciseSelectionPage />
+                </MainLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/doctor/patients/:patientId/plans/:planId/analytics"
+            element={
+              <ProtectedRoute>
+                <MainLayout>
+                  <PlanAnalyticsDashboardPage />
                 </MainLayout>
               </ProtectedRoute>
             }

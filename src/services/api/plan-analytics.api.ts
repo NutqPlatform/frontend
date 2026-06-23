@@ -11,6 +11,9 @@ export interface TherapyPlanSummaryDto {
   totalFailedWords: number;
   totalCompletedWords: number;
   totalSessions: number;
+  masteredSimilarity: number;
+  planOutcomeScore: number;
+  planOutcomeRating: string;
 }
 
 export interface RecognizedWordHistoryDto {
@@ -64,6 +67,7 @@ export interface PlanPeriodComparisonDto {
   similarityDelta?: number;
   firstAttemptDelta?: number;
   hasData: boolean;
+  trendRating: string;
 }
 
 export interface PlanProgressComparisonDto {
@@ -80,12 +84,29 @@ export interface PlanFocusAreaItemDto {
 }
 
 export interface PlanClinicalInsightsDto {
-  strengths: string[];
-  weaknesses: string[];
-  recommendedFocusAreas: PlanFocusAreaItemDto[];
-  suggestedNextExercises: string[];
-  therapyAttentionAreas: string[];
+  clinicalSummary: string;
+  strengthAnalysis: string[];
+  weaknessAnalysis: string[];
+  treatmentRecommendations: string[];
+  suggestedFocusAreas: PlanFocusAreaItemDto[];
+  therapistNotes: string[];
   analysisSource: string;
+}
+
+export interface RecurringDifficultyItemDto {
+  word: string;
+  category?: string;
+  frequency: number;
+  severityScore: number;
+  attentionLevel: string;
+}
+
+export interface SuggestedNextTherapyContentDto {
+  categoriesNeedingReinforcement: string[];
+  vocabularyNeedingRepetition: string[];
+  difficultyAdjustment: string;
+  recommendedExerciseCount: number;
+  reasoning: string;
 }
 
 export interface TherapyPlanAnalyticsDto {
@@ -102,6 +123,29 @@ export interface TherapyPlanAnalyticsDto {
   weaknesses: PlanWeaknessAnalysisDto;
   progressComparison: PlanProgressComparisonDto;
   clinicalInsights: PlanClinicalInsightsDto;
+  recurringDifficulties: RecurringDifficultyItemDto[];
+  suggestedNextContent: SuggestedNextTherapyContentDto;
+}
+
+export interface TherapyPlanReportModel {
+  reportId: number;
+  generatedAt: string;
+  doctorName: string;
+  patientName: string;
+  patientAge: string;
+  diagnosis: string;
+  planId: number;
+  planDescription: string;
+  planStatus: string;
+  startDate: string;
+  endDate: string;
+  summary: TherapyPlanSummaryDto;
+  words: PlanWordPerformanceDto[];
+  categories: PlanCategoryPerformanceDto[];
+  progressComparison: PlanProgressComparisonDto;
+  clinicalInsights: PlanClinicalInsightsDto;
+  recurringDifficulties: RecurringDifficultyItemDto[];
+  suggestedNextContent: SuggestedNextTherapyContentDto;
 }
 
 export async function getPlanAnalytics(
@@ -110,6 +154,16 @@ export async function getPlanAnalytics(
 ): Promise<TherapyPlanAnalyticsDto> {
   const response = await apiClient.get<TherapyPlanAnalyticsDto>(
     `/doctors/${doctorId}/plans/${planId}/analytics`
+  );
+  return response.data;
+}
+
+export async function getPlanAnalyticsPdfModel(
+  doctorId: number,
+  planId: number
+): Promise<TherapyPlanReportModel> {
+  const response = await apiClient.get<TherapyPlanReportModel>(
+    `/doctors/${doctorId}/plans/${planId}/analytics/pdf-model`
   );
   return response.data;
 }

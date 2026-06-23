@@ -13,7 +13,6 @@ import {
 import {
   AlertCircle,
   ArrowLeft,
-  BarChart3,
   Calendar,
   Activity,
   Target,
@@ -40,7 +39,7 @@ import {
 import { useAuth } from '../../hooks/useAuth';
 import { getPlanAnalytics, type TherapyPlanAnalyticsDto, type PlanWordPerformanceDto, type PlanCategoryPerformanceDto } from '../../services/api/plan-analytics.api';
 import { getPatientDetails } from '../../services/api/patients.api';
-import { formatAnalyticsDate, formatAnalyticsDateTime, getTrendBadgeClass } from '../../utils/patientAnalyticsCharts';
+import { formatAnalyticsDate, getTrendBadgeClass } from '../../utils/patientAnalyticsCharts';
 
 const CHART_COLORS = [
   '#2563eb', // blue
@@ -71,18 +70,33 @@ function formatDuration(totalSeconds: number): string {
   return `${seconds}s`;
 }
 
-// Helper to display delta percentages in the comparison tab
-function renderDeltaCell(delta: number | undefined, hasData: boolean) {
+// Helper to display delta percentages with trend descriptions in the comparison tab
+function renderDeltaCell(delta: number | undefined, hasData: boolean, trendRating: string) {
   if (!hasData || delta === undefined || delta === null) {
     return <span className="text-gray-400 font-normal">N/A</span>;
   }
 
   const rounded = Math.round(delta * 10) / 10;
+  const ratingBadge = (
+    <span
+      className={`ml-2 inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+        trendRating === 'Strong Improvement' ? 'bg-emerald-100 text-emerald-800' :
+        trendRating === 'Improving' ? 'bg-blue-100 text-blue-800' :
+        trendRating === 'Declining' ? 'bg-red-100 text-red-800' :
+        trendRating === 'Critical Decline' ? 'bg-red-200 text-red-950 border border-red-300' :
+        'bg-gray-100 text-gray-800'
+      }`}
+    >
+      {trendRating}
+    </span>
+  );
+
   if (rounded > 0) {
     return (
       <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
         <TrendingUp className="h-4 w-4" />
         +{rounded}%
+        {ratingBadge}
       </span>
     );
   }
@@ -91,6 +105,7 @@ function renderDeltaCell(delta: number | undefined, hasData: boolean) {
       <span className="inline-flex items-center gap-1 font-semibold text-red-600">
         <TrendingDown className="h-4 w-4" />
         {rounded}%
+        {ratingBadge}
       </span>
     );
   }
@@ -98,6 +113,7 @@ function renderDeltaCell(delta: number | undefined, hasData: boolean) {
     <span className="inline-flex items-center gap-1 font-semibold text-gray-500">
       <Minus className="h-4 w-4" />
       0%
+      {ratingBadge}
     </span>
   );
 }
@@ -297,7 +313,7 @@ export function PlanAnalyticsDashboardPage() {
             <ArrowLeft className="h-4 w-4" />
             Patient Profile
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
               Plan Performance Dashboard
             </h1>
@@ -310,6 +326,17 @@ export function PlanAnalyticsDashboardPage() {
               }`}
             >
               {analytics.planStatus}
+            </span>
+            {/* Outcome scoring badge */}
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold border ${
+                analytics.summary.planOutcomeRating === 'Excellent' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                analytics.summary.planOutcomeRating === 'Good' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                analytics.summary.planOutcomeRating === 'Moderate' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                'bg-red-100 text-red-800 border-red-200'
+              }`}
+            >
+              Outcome: {analytics.summary.planOutcomeRating} ({Math.round(analytics.summary.planOutcomeScore)}/100)
             </span>
           </div>
           <p className="mt-2 text-gray-600 text-sm">
@@ -329,13 +356,24 @@ export function PlanAnalyticsDashboardPage() {
             )}
           </div>
         </div>
-        <button
-          onClick={loadData}
-          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm self-start"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh Data
-        </button>
+        <div className="flex gap-2 self-start">
+          <a
+            href={`http://localhost:5246/api/doctors/${user?.id}/plans/${planId}/analytics/pdf-model`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <FileText className="h-4 w-4" />
+            PDF Export Data
+          </a>
+          <button
+            onClick={loadData}
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {!hasData ? (
@@ -479,17 +517,29 @@ export function PlanAnalyticsDashboardPage() {
                   </div>
                 </div>
 
-                {/* 7. Average Pronunciation Similarity */}
-                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm flex items-start gap-4">
+                {/* 7. Double Similarity Card (Attempt vs Mastered) */}
+                <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm flex items-start gap-4 col-span-1 md:col-span-2">
                   <div className="rounded-xl bg-pink-50 p-3 text-pink-600">
                     <Layers className="h-6 w-6" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">Average Similarity</p>
-                    <p className="text-2xl font-bold text-gray-900 mt-1">
-                      {Math.round(analytics.summary.averagePronunciationSimilarity)}%
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-gray-500">Phonetic Similarity</p>
+                      <span className="text-[10px] bg-gray-100 text-gray-500 font-bold px-1.5 py-0.5 rounded uppercase">Dual Metric</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      <div>
+                        <span className="text-xs text-gray-400 block">Attempt Similarity</span>
+                        <span className="text-xl font-bold text-gray-900">{Math.round(analytics.summary.averagePronunciationSimilarity)}%</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-gray-400 block font-semibold text-purple-700">Mastered Similarity</span>
+                        <span className="text-xl font-bold text-purple-900">{Math.round(analytics.summary.masteredSimilarity)}%</span>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-2 leading-relaxed">
+                      <strong>Attempt Sim.</strong> averages all trials. <strong>Mastered Sim.</strong> averages only the highest score achieved per word, reflecting final speech capability.
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">Phonetic accuracy index</p>
                   </div>
                 </div>
 
@@ -965,6 +1015,68 @@ export function PlanAnalyticsDashboardPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Recurring Difficulties Section */}
+                <div className="col-span-1 lg:col-span-2 rounded-2xl border border-gray-200 bg-gray-50 p-6 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+                    <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5 text-amber-500" />
+                      Recurring Difficulty Detection
+                    </h4>
+                    <span className="text-xs bg-amber-100 text-amber-800 font-semibold px-2.5 py-0.5 rounded">Therapist Flag</span>
+                  </div>
+                  {analytics.recurringDifficulties.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic text-center py-4">No recurring difficulties flagged in this plan.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200 text-sm">
+                        <thead>
+                          <tr className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            <th className="pb-2">Vocabulary Item</th>
+                            <th className="pb-2">Category</th>
+                            <th className="pb-2 text-center">Sessions Failed</th>
+                            <th className="pb-2">Severity Score</th>
+                            <th className="pb-2 text-center">Attention level</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 text-gray-700">
+                          {analytics.recurringDifficulties.map((item) => (
+                            <tr key={item.word} className="hover:bg-gray-50/50">
+                              <td className="py-2.5 font-bold text-gray-900">{item.word}</td>
+                              <td className="py-2.5 capitalize">{item.category || 'general'}</td>
+                              <td className="py-2.5 text-center font-medium text-red-600">{item.frequency}</td>
+                              <td className="py-2.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{Math.round(item.severityScore)}/100</span>
+                                  <div className="w-24 h-1.5 rounded-full bg-gray-200 overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${
+                                        item.severityScore >= 75 ? 'bg-red-500' :
+                                        item.severityScore >= 40 ? 'bg-amber-500' : 'bg-gray-400'
+                                      }`}
+                                      style={{ width: `${item.severityScore}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-2.5 text-center">
+                                <span
+                                  className={`inline-flex rounded px-2 py-0.5 text-xs font-bold ${
+                                    item.attentionLevel === 'High' ? 'bg-red-100 text-red-800' :
+                                    item.attentionLevel === 'Medium' ? 'bg-amber-100 text-amber-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}
+                                >
+                                  {item.attentionLevel}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1009,9 +1121,9 @@ export function PlanAnalyticsDashboardPage() {
                       ].map((item) => (
                         <tr key={item.name} className="hover:bg-gray-50/50">
                           <td className="px-6 py-4 font-semibold text-gray-900">{item.name}</td>
-                          <td className="px-6 py-4">{renderDeltaCell(item.ref?.accuracyDelta, item.ref?.hasData)}</td>
-                          <td className="px-6 py-4">{renderDeltaCell(item.ref?.similarityDelta, item.ref?.hasData)}</td>
-                          <td className="px-6 py-4">{renderDeltaCell(item.ref?.firstAttemptDelta, item.ref?.hasData)}</td>
+                          <td className="px-6 py-4">{renderDeltaCell(item.ref?.accuracyDelta, item.ref?.hasData, item.ref?.trendRating)}</td>
+                          <td className="px-6 py-4">{renderDeltaCell(item.ref?.similarityDelta, item.ref?.hasData, item.ref?.trendRating)}</td>
+                          <td className="px-6 py-4">{renderDeltaCell(item.ref?.firstAttemptDelta, item.ref?.hasData, item.ref?.trendRating)}</td>
                           <td className="px-6 py-4 text-center">
                             {item.ref?.hasData ? (
                               <span className="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-bold text-green-700">
@@ -1049,10 +1161,10 @@ export function PlanAnalyticsDashboardPage() {
                   <p className="text-sm text-gray-500">Structured evaluation computed from the training patterns</p>
                 </div>
                 <div className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-1.5 shadow-xs">
-                  {analytics.clinicalInsights.analysisSource === 'Ai' ? (
+                  {analytics.clinicalInsights.analysisSource === 'AI' || analytics.clinicalInsights.analysisSource === 'Ai' ? (
                     <>
                       <Brain className="h-4 w-4 text-purple-600" />
-                      <span className="text-xs font-bold text-purple-800">AI Assisted</span>
+                      <span className="text-xs font-bold text-purple-800">AI Clinical Interpretation Layer</span>
                     </>
                   ) : (
                     <>
@@ -1060,6 +1172,80 @@ export function PlanAnalyticsDashboardPage() {
                       <span className="text-xs font-bold text-gray-700">Deterministic Engine (V1)</span>
                     </>
                   )}
+                </div>
+              </div>
+
+              {/* Clinical Summary */}
+              <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-2">
+                <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-gray-500" />
+                  Clinical Summary
+                </h4>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line bg-gray-50 p-4 rounded-xl border border-gray-100">
+                  {analytics.clinicalInsights.clinicalSummary || "No clinical summary could be determined."}
+                </p>
+              </div>
+
+              {/* Suggested Next Content Card */}
+              <div className="rounded-2xl border border-blue-200 bg-white p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-blue-100 pb-3">
+                  <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-blue-600" />
+                    Clinical Guidelines & Next Therapy Recommendations
+                  </h4>
+                  <span className="text-xs bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded">AI Recommendations</span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Parameters advice */}
+                  <div className="space-y-3 bg-blue-50/20 p-4 rounded-xl border border-blue-50">
+                    <div>
+                      <span className="text-xs font-semibold text-gray-400 block uppercase tracking-wider">Difficulty Target</span>
+                      <span className="text-sm font-bold text-blue-900 block mt-1">{analytics.suggestedNextContent.difficultyAdjustment}</span>
+                    </div>
+                    <div className="pt-2 border-t border-blue-100/50">
+                      <span className="text-xs font-semibold text-gray-400 block uppercase tracking-wider">Recommended Exercises</span>
+                      <span className="text-sm font-bold text-blue-900 block mt-1">{analytics.suggestedNextContent.recommendedExerciseCount} active exercise(s)</span>
+                    </div>
+                  </div>
+
+                  {/* Reinforcement categories */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Categories to Reinforce</span>
+                    {analytics.suggestedNextContent.categoriesNeedingReinforcement.length === 0 ? (
+                      <p className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded font-medium">No category deficiencies flagged.</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1.5">
+                        {analytics.suggestedNextContent.categoriesNeedingReinforcement.map((c) => (
+                          <span key={c} className="bg-red-50 text-red-700 rounded px-2.5 py-1 text-xs font-semibold border border-red-100 capitalize">
+                            {c}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Vocabulary repetition */}
+                  <div className="space-y-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block">Vocabulary to Repeat</span>
+                    {analytics.suggestedNextContent.vocabularyNeedingRepetition.length === 0 ? (
+                      <p className="text-xs text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded font-medium">All practiced vocabulary successfully completed!</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {analytics.suggestedNextContent.vocabularyNeedingRepetition.map((w) => (
+                          <span key={w} className="bg-gray-100 text-gray-700 rounded px-2 py-0.5 text-xs font-medium">
+                            {w}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Reasoning explanation */}
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 mt-2 text-xs text-gray-600 leading-relaxed">
+                  <strong className="text-gray-900 block mb-1">Clinical Reasoning:</strong>
+                  {analytics.suggestedNextContent.reasoning}
                 </div>
               </div>
 
@@ -1071,12 +1257,12 @@ export function PlanAnalyticsDashboardPage() {
                     Observed Strengths
                   </h4>
                   <ul className="list-disc list-inside text-sm text-emerald-900 space-y-1.5 pl-1">
-                    {analytics.clinicalInsights.strengths.map((str, idx) => (
+                    {analytics.clinicalInsights.strengthAnalysis.map((str, idx) => (
                       <li key={idx} className="leading-relaxed">
                         {str}
                       </li>
                     ))}
-                    {analytics.clinicalInsights.strengths.length === 0 && (
+                    {analytics.clinicalInsights.strengthAnalysis.length === 0 && (
                       <li className="italic text-emerald-600/70">No specific strengths computed yet.</li>
                     )}
                   </ul>
@@ -1089,12 +1275,12 @@ export function PlanAnalyticsDashboardPage() {
                     Areas Requiring Practice
                   </h4>
                   <ul className="list-disc list-inside text-sm text-red-900 space-y-1.5 pl-1">
-                    {analytics.clinicalInsights.weaknesses.map((wk, idx) => (
+                    {analytics.clinicalInsights.weaknessAnalysis.map((wk, idx) => (
                       <li key={idx} className="leading-relaxed">
                         {wk}
                       </li>
                     ))}
-                    {analytics.clinicalInsights.weaknesses.length === 0 && (
+                    {analytics.clinicalInsights.weaknessAnalysis.length === 0 && (
                       <li className="italic text-red-600/70">No specific warnings triggered.</li>
                     )}
                   </ul>
@@ -1107,11 +1293,11 @@ export function PlanAnalyticsDashboardPage() {
                   <Target className="h-5 w-5 text-gray-500" />
                   Recommended Focus Areas (Priority Ordered)
                 </h4>
-                {analytics.clinicalInsights.recommendedFocusAreas.length === 0 ? (
+                {analytics.clinicalInsights.suggestedFocusAreas.length === 0 ? (
                   <p className="text-sm text-gray-500 italic">No focus areas calculated.</p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {analytics.clinicalInsights.recommendedFocusAreas.map((item) => (
+                    {analytics.clinicalInsights.suggestedFocusAreas.map((item) => (
                       <div
                         key={item.area}
                         className="p-4 rounded-xl border border-gray-200 bg-gray-50 flex flex-col justify-between"
@@ -1137,10 +1323,10 @@ export function PlanAnalyticsDashboardPage() {
                 <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
                   <h4 className="text-base font-bold text-gray-900 flex items-center gap-2">
                     <Activity className="h-5 w-5 text-gray-500" />
-                    Suggested Next Exercises
+                    Treatment Recommendations
                   </h4>
                   <ul className="space-y-2 text-sm text-gray-700 pl-1">
-                    {analytics.clinicalInsights.suggestedNextExercises.map((ex, idx) => (
+                    {analytics.clinicalInsights.treatmentRecommendations.map((ex, idx) => (
                       <li key={idx} className="flex items-start gap-2 leading-relaxed">
                         <span className="bg-gray-100 text-gray-900 rounded-full h-5 w-5 flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-0.5">
                           {idx + 1}
@@ -1148,7 +1334,7 @@ export function PlanAnalyticsDashboardPage() {
                         <span>{ex}</span>
                       </li>
                     ))}
-                    {analytics.clinicalInsights.suggestedNextExercises.length === 0 && (
+                    {analytics.clinicalInsights.treatmentRecommendations.length === 0 && (
                       <li className="italic text-gray-500">No exercise recommendations recorded.</li>
                     )}
                   </ul>
@@ -1160,13 +1346,13 @@ export function PlanAnalyticsDashboardPage() {
                     Therapist Attention Flags
                   </h4>
                   <ul className="space-y-2.5 text-sm text-gray-700 pl-1">
-                    {analytics.clinicalInsights.therapyAttentionAreas.map((att, idx) => (
+                    {analytics.clinicalInsights.therapistNotes.map((att, idx) => (
                       <li key={idx} className="flex items-start gap-2.5 leading-relaxed bg-red-50/20 p-2.5 rounded-lg border border-red-50/50">
                         <AlertCircle className="h-4.5 w-4.5 text-red-500 flex-shrink-0 mt-0.5" />
                         <span>{att}</span>
                       </li>
                     ))}
-                    {analytics.clinicalInsights.therapyAttentionAreas.length === 0 && (
+                    {analytics.clinicalInsights.therapistNotes.length === 0 && (
                       <li className="italic text-gray-500">No flags raised. Phonetic matching meets baseline quality thresholds.</li>
                     )}
                   </ul>

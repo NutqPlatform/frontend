@@ -27,13 +27,12 @@ export function ExercisesPage() {
   useEffect(() => {
     if (user?.id && user?.role === 'doctor') loadExercises();
   }, [user]);
-
   useEffect(() => {
     let results = exercises;
     
     if (searchTerm) {
       results = results.filter(exercise =>
-        exercise.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (exercise.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         exercise.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }

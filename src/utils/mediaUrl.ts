@@ -8,5 +8,5 @@ export function resolveMediaUrl(url?: string | null): string | undefined {
   if (url.startsWith('/')) {
     return `${API_BASE_URL}${url}`;
   }
-  return url;
+  return `${API_BASE_URL}/${url}`;
 }

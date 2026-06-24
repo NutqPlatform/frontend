@@ -71,7 +71,7 @@ export function PatientDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Your Therapy Dashboard</h1>
             <p className="mt-2 text-gray-600">Track your progress and continue your therapy journey</p>
           </div>
-          <button 
+          <button
             onClick={() => navigate('/patient/plans')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-all"
           >
@@ -89,7 +89,7 @@ export function PatientDashboard() {
             </div>
             <div>
               <p className="font-medium text-red-900">{error}</p>
-              <button 
+              <button
                 onClick={loadDashboard}
                 className="text-sm text-red-600 hover:text-red-800 mt-1"
               >
@@ -163,13 +163,12 @@ export function PatientDashboard() {
                 </p>
               </div>
               {currentPlan?.planStatus && (
-                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                  currentPlan.planStatus === 'Active'
-                    ? 'bg-green-100 text-green-700'
-                    : currentPlan.planStatus === 'Paused'
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${currentPlan.planStatus === 'Active'
+                  ? 'bg-green-100 text-green-700'
+                  : currentPlan.planStatus === 'Paused'
                     ? 'bg-yellow-100 text-yellow-700'
                     : 'bg-blue-100 text-blue-700'
-                }`}>
+                  }`}>
                   {currentPlan.planStatus}
                 </span>
               )}
@@ -213,13 +212,12 @@ export function PatientDashboard() {
                         className="group flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:bg-gray-50 transition-all"
                       >
                         <div className="flex items-center gap-4">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                            exercise.completed
-                              ? 'bg-green-100 text-green-600'
-                              : exercise.started
+                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${exercise.completed
+                            ? 'bg-green-100 text-green-600'
+                            : exercise.started
                               ? 'bg-yellow-100 text-yellow-600'
                               : 'bg-gray-100 text-gray-600'
-                          }`}>
+                            }`}>
                             {exercise.completed ? (
                               <CheckCircle size={20} />
                             ) : exercise.started ? (
@@ -280,54 +278,7 @@ export function PatientDashboard() {
 
         {/* Quick Actions & Tips */}
         <div className="space-y-6">
-          {/* Quick Actions */}
-          <div className="rounded-xl bg-gray-900 p-6 text-white">
-            <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <button
-                onClick={() => navigate('/patient/plans')}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <Play size={18} />
-                  </div>
-                  <span className="font-medium">Continue Therapy</span>
-                </div>
-                <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => navigate('/patient/reports')}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <CheckCircle size={18} />
-                  </div>
-                  <span className="font-medium">View Reports</span>
-                </div>
-                <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => navigate('/patient/profile')}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <Activity size={18} />
-                  </div>
-                  <span className="font-medium">My Profile</span>
-                </div>
-                <svg className="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
+
 
           {/* Daily Tip */}
           <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">

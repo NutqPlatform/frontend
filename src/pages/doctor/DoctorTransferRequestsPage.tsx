@@ -18,6 +18,7 @@ export function DoctorTransferRequestsPage() {
   const load = async () => {
     if (!user?.id) return;
     setLoading(true);
+    setError(null);
     try {
       setRequests(await getDoctorTransferRequests(user.id));
     } catch {
@@ -30,6 +31,7 @@ export function DoctorTransferRequestsPage() {
   const handleAccept = async (id: number) => {
     if (!user?.id) return;
     setActingId(id);
+    setError(null);
     try {
       await acceptTransferRequest(user.id, id);
       await load();
@@ -43,6 +45,7 @@ export function DoctorTransferRequestsPage() {
   const handleReject = async (id: number) => {
     if (!user?.id) return;
     setActingId(id);
+    setError(null);
     try {
       await rejectTransferRequest(user.id, id);
       await load();

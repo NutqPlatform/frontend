@@ -91,7 +91,7 @@ export function PlanExerciseSelectionPage() {
     const term = searchTerm.toLowerCase();
     return exercises.filter(
       (ex) =>
-        ex.name.toLowerCase().includes(term) ||
+        (ex.name ?? '').toLowerCase().includes(term) ||
         ex.description?.toLowerCase().includes(term) ||
         ex.category?.toLowerCase().includes(term)
     );

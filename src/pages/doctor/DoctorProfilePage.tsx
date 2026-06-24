@@ -11,17 +11,17 @@ export function DoctorProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
+
   // Profile editing states
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false);
-  
+
   const [isEditingCV, setIsEditingCV] = useState(false);
   const [cvFile, setCvFile] = useState<File | null>(null);
   const [isUpdatingCV, setIsUpdatingCV] = useState(false);
-  
+
   const [isEditingPassword, setIsEditingPassword] = useState(false);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -102,16 +102,16 @@ export function DoctorProfilePage() {
     setSuccess(null);
 
     try {
-      const base64Image = photoPreview.startsWith('data:') 
-        ? photoPreview 
+      const base64Image = photoPreview.startsWith('data:')
+        ? photoPreview
         : `data:image/jpeg;base64,${photoPreview}`;
-      
+
       await updateDoctorProfile(user.id, { profilePicture: base64Image });
       setProfile({ ...profile!, profilePicture: base64Image });
       setIsEditingPhoto(false);
       setPhotoFile(null);
       setSuccess('Profile picture updated successfully');
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
@@ -262,7 +262,7 @@ export function DoctorProfilePage() {
             </div>
             <div>
               <p className="font-medium text-red-900">{error}</p>
-              <button 
+              <button
                 onClick={loadProfile}
                 className="text-sm text-red-600 hover:text-red-800 mt-1"
               >
@@ -294,7 +294,7 @@ export function DoctorProfilePage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Profile Picture</h2>
-                <p className="text-sm text-gray-600 mt-1">Update your profile image</p>
+
               </div>
               {!isEditingPhoto && (
                 <button
@@ -390,7 +390,7 @@ export function DoctorProfilePage() {
               ) : (
                 <div className="flex-1">
                   <p className="text-gray-600">
-                    {profile.profilePicture 
+                    {profile.profilePicture
                       ? 'Your profile picture is visible to your patients. Use a professional, clear image.'
                       : 'Add a profile picture to help patients recognize you. Use a professional, clear image.'}
                   </p>
@@ -827,26 +827,7 @@ export function DoctorProfilePage() {
             )}
           </div>
 
-          {/* Account Status Card */}
-          <div className="rounded-xl bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white">
-            <h3 className="text-lg font-semibold mb-4">Account Status</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Profile Completion</span>
-                <span className="px-3 py-1 rounded-full text-xs bg-green-500 text-white font-medium">
-                  {profile.profilePicture && profile.cv ? '100%' : profile.profilePicture ? '50%' : '0%'}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Last Updated</span>
-                <span className="text-sm font-medium">Today</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-300">Member Since</span>
-                <span className="text-sm font-medium">2024</span>
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
     </div>

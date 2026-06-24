@@ -109,6 +109,29 @@ export interface SuggestedNextTherapyContentDto {
   reasoning: string;
 }
 
+export interface PlanSessionWordDto {
+  expectedWord: string;
+  category?: string;
+  totalAttempts: number;
+  bestSimilarityScore: number;
+  averageSimilarityScore: number;
+  succeeded: boolean;
+}
+
+export interface PlanSessionTimelineDto {
+  sessionNumber: number;
+  trainingSessionId: number;
+  startTime: string;
+  endTime: string;
+  durationSeconds: number;
+  accuracyPercent: number;
+  averageSimilarityScore: number;
+  totalAttempts: number;
+  wordsSucceeded: number;
+  wordsAttempted: number;
+  words: PlanSessionWordDto[];
+}
+
 export interface TherapyPlanAnalyticsDto {
   planId: number;
   patientId: number;
@@ -125,6 +148,7 @@ export interface TherapyPlanAnalyticsDto {
   clinicalInsights: PlanClinicalInsightsDto;
   recurringDifficulties: RecurringDifficultyItemDto[];
   suggestedNextContent: SuggestedNextTherapyContentDto;
+  sessionTimeline: PlanSessionTimelineDto[];
 }
 
 export interface TherapyPlanReportModel {

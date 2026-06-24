@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getDoctorAnalytics, getOngoingPlans, getDoctorPatients } from '../../services/api/dashboard.api';
 import type { DoctorAnalyticsDto, OngoingPlan, Patient } from '../../services/api/dashboard.api';
-import { 
-  Users, FileText, Activity, TrendingUp, 
+import {
+  Users, FileText, Activity, TrendingUp,
   Target,
-  Clock, CheckCircle, User, ChevronRight, Play, LineChart
+  User, ChevronRight, Play, LineChart
 } from 'lucide-react';
 
 export function StatisticsPage() {
@@ -59,7 +59,7 @@ export function StatisticsPage() {
     {
       icon: <FileText className="w-6 h-6" />,
       label: 'Active Plans',
-      value: analytics?.totalPlans || 0,
+      value: plans.filter(p => p.status === 'Active').length,
       bgColor: 'bg-gray-50',
       iconColor: 'text-gray-900',
       borderColor: 'border-gray-200'
@@ -81,7 +81,7 @@ export function StatisticsPage() {
       borderColor: 'border-gray-200'
     }
   ];
-
+  const activePlans = plans.filter(p => p.status === 'Active')
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -120,7 +120,7 @@ export function StatisticsPage() {
             </div>
             <div>
               <p className="font-medium text-red-900">{error}</p>
-              <button 
+              <button
                 onClick={loadDashboardData}
                 className="text-sm text-red-600 hover:text-red-800 mt-1"
               >
@@ -174,7 +174,7 @@ export function StatisticsPage() {
               <div>
                 <h2 className="text-xl font-bold text-gray-900">Active Therapy Plans</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                  {plans.length} ongoing plan{plans.length !== 1 ? 's' : ''}
+                  {activePlans.length} active plan {activePlans.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
@@ -186,7 +186,7 @@ export function StatisticsPage() {
               </button>
             </div>
 
-            {plans.length === 0 ? (
+            {activePlans.length === 0 ? (
               <div className="text-center py-8">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
                   <FileText size={24} className="text-gray-400" />
@@ -196,27 +196,21 @@ export function StatisticsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {plans.slice(0, 3).map((plan) => (
+                {activePlans.slice(0, 3).map((plan) => (
                   <div
                     key={plan.id}
                     className="group flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 hover:border-gray-300 hover:bg-gray-50 transition-all"
                   >
                     <div className="flex items-center gap-4">
-                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                        plan.status === 'Active' ? 'bg-green-100 text-green-600' :
-                        plan.status === 'Paused' ? 'bg-yellow-100 text-yellow-600' :
-                        'bg-gray-100 text-gray-600'
-                      }`}>
-                        {plan.status === 'Active' ? (
-                          <Play size={20} />
-                        ) : plan.status === 'Paused' ? (
-                          <Clock size={20} />
-                        ) : (
-                          <CheckCircle size={20} />
-                        )}
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center bg-green-100 text-green-600">
+                        <Play size={20} />
                       </div>
+
                       <div>
-                        <h4 className="font-medium text-gray-900">{plan.description || 'Untitled Plan'}</h4>
+                        <h4 className="font-medium text-gray-900">
+                          {plan.description || 'Untitled Plan'}
+                        </h4>
+
                         <div className="flex items-center gap-3 text-sm text-gray-600 mt-1">
                           {plan.patientName && (
                             <span className="flex items-center gap-1">
@@ -224,14 +218,21 @@ export function StatisticsPage() {
                               {plan.patientName}
                             </span>
                           )}
+
                           {plan.progressPercentage !== undefined && (
-                            <span className="font-medium">{plan.progressPercentage.toFixed(1)}% complete</span>
+                            <span className="font-medium">
+                              {plan.progressPercentage.toFixed(1)}% complete
+                            </span>
                           )}
                         </div>
                       </div>
                     </div>
+
                     <button
-                      onClick={() => plan.patientId && navigate(`/doctor/patients/${plan.patientId}`)}
+                      onClick={() =>
+                        plan.patientId &&
+                        navigate(`/doctor/patients/${plan.patientId}`)
+                      }
                       className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition-all opacity-0 group-hover:opacity-100"
                     >
                       View
@@ -241,7 +242,6 @@ export function StatisticsPage() {
               </div>
             )}
           </div>
-
           {/* Patient Training Analytics */}
           <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
             <div className="flex items-center justify-between mb-6">
@@ -299,44 +299,8 @@ export function StatisticsPage() {
         <div className="space-y-6">
           {/* Quick Actions */}
           <div className="rounded-xl bg-gray-900 p-6 text-white">
-            <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
+
             <div className="space-y-3">
-              <button
-                onClick={() => navigate('/doctor/patients')}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <Users size={18} />
-                  </div>
-                  <span className="font-medium">View Patients</span>
-                </div>
-                <ChevronRight size={18} className="opacity-60" />
-              </button>
-              <button
-                onClick={() => navigate('/doctor/plans')}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <FileText size={18} />
-                  </div>
-                  <span className="font-medium">Manage Plans</span>
-                </div>
-                <ChevronRight size={18} className="opacity-60" />
-              </button>
-              <button
-                onClick={() => navigate('/doctor/exercises')}
-                className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-white/20">
-                    <Activity size={18} />
-                  </div>
-                  <span className="font-medium">Exercise Library</span>
-                </div>
-                <ChevronRight size={18} className="opacity-60" />
-              </button>
               <button
                 onClick={() => navigate('/doctor/patients/invitation-code')}
                 className="w-full flex items-center justify-between p-3 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
@@ -358,7 +322,7 @@ export function StatisticsPage() {
               <h3 className="font-semibold text-gray-900">Recent Patients</h3>
               <span className="text-sm text-gray-600">{patients.length} total</span>
             </div>
-            
+
             {patients.length === 0 ? (
               <div className="text-center py-6">
                 <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
@@ -396,7 +360,7 @@ export function StatisticsPage() {
             )}
           </div>
 
-          
+
         </div>
       </div>
       {/* Bottom metrics removed — no reliable backend endpoints available to compute these. */}

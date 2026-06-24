@@ -19,6 +19,7 @@ export function PatientFindDoctorPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showRequests, setShowRequests] = useState(false);
 
   useEffect(() => {
     if (user?.role === 'patient' && user.id) load();
@@ -46,7 +47,7 @@ export function PatientFindDoctorPage() {
   const filtered = useMemo(() => {
     const term = search.toLowerCase().trim();
     if (!term) return doctors;
-    return doctors.filter((d) => d.name.toLowerCase().includes(term) || d.email.toLowerCase().includes(term));
+    return doctors.filter((d) => (d.name ?? '').toLowerCase().includes(term) || (d.email ?? '').toLowerCase().includes(term));
   }, [doctors, search]);
 
   const handleRequest = async (doctorId: number) => {
@@ -78,23 +79,62 @@ export function PatientFindDoctorPage() {
       {error && <div className="rounded-lg bg-red-50 border border-red-200 p-4 text-red-700">{error}</div>}
 
       {requests.length > 0 && (
-        <div className="rounded-xl bg-white border border-gray-200 p-6">
-          <h2 className="font-semibold text-gray-900 mb-3">Your Requests</h2>
-          <div className="space-y-2">
-            {requests.map((r) => (
-              <div key={r.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm">
-                <span>{r.toDoctorName} — <strong>{r.status}</strong></span>
-                {r.status === 'Pending' && (
-                  <button onClick={() => user?.id && cancelTransferRequest(user.id, r.id).then(load)} className="text-red-600 hover:text-red-700 flex items-center gap-1">
-                    <X size={14} /> Cancel
-                  </button>
-                )}
+        <div className="rounded-xl bg-white border border-gray-200">
+          <button
+            type="button"
+            onClick={() => setShowRequests(!showRequests)}
+            className="w-full flex items-center justify-between p-6 text-left"
+          >
+            <div>
+              <h2 className="font-semibold text-gray-900">
+                Request History
+              </h2>
+              <p className="text-sm text-gray-500">
+                {requests.length} request{requests.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <span className="text-sm text-blue-600 font-medium">
+              {showRequests ? 'Hide' : 'View'}
+            </span>
+          </button>
+
+          {showRequests && (
+            <div className="px-6 pb-6 border-t border-gray-100">
+              <div className="space-y-2 pt-4">
+                {requests.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm"
+                  >
+                    <div>
+                      <span className="font-medium">
+                        {r.toDoctorName}
+                      </span>
+                      <span className="text-gray-500 ml-2">
+                        {r.status}
+                      </span>
+                    </div>
+
+                    {r.status === 'Pending' && (
+                      <button
+                        onClick={() =>
+                          user?.id &&
+                          cancelTransferRequest(user.id, r.id).then(load)
+                        }
+                        className="text-red-600 hover:text-red-700 flex items-center gap-1"
+                      >
+                        <X size={14} />
+                        Cancel
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
-
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name or email" className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-300" />

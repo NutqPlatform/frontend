@@ -45,9 +45,13 @@ export function DoctorsPage() {
 
     const term = searchTerm.toLowerCase().trim();
     return doctors.filter((d) =>
-      d.name.toLowerCase().includes(term) ||
-      d.email.toLowerCase().includes(term) ||
-      d.patients?.some((p) => p.name.toLowerCase().includes(term) || p.email.toLowerCase().includes(term))
+      (d.name ?? '').toLowerCase().includes(term) ||
+      (d.email ?? '').toLowerCase().includes(term) ||
+      d.patients?.some(
+        (p) =>
+          (p.name ?? '').toLowerCase().includes(term) ||
+          (p.email ?? '').toLowerCase().includes(term)
+      )
     );
   }, [doctors, searchTerm]);
 

@@ -92,7 +92,7 @@ export function PatientReportsPage() {
             </div>
             <div>
               <p className="font-medium text-red-900">{error}</p>
-              <button 
+              <button
                 onClick={loadReports}
                 className="text-sm text-red-600 hover:text-red-800 mt-1"
               >
@@ -132,21 +132,19 @@ export function PatientReportsPage() {
       <div className="mb-6 flex flex-wrap gap-2">
         <button
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            filter === 'all'
-              ? 'bg-gray-900 text-white'
-              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-          }`}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'all'
+            ? 'bg-gray-900 text-white'
+            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
         >
           All Reports
         </button>
         <button
           onClick={() => setFilter('recent')}
-          className={`px-4 py-2 rounded-lg font-medium transition-all ${
-            filter === 'recent'
-              ? 'bg-gray-900 text-white'
-              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-          }`}
+          className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'recent'
+            ? 'bg-gray-900 text-white'
+            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+            }`}
         >
           Last 30 Days
         </button>
@@ -162,7 +160,7 @@ export function PatientReportsPage() {
             {filter === 'recent' ? 'No Recent Reports' : 'No Reports Yet'}
           </h3>
           <p className="text-gray-600 max-w-md mx-auto">
-            {filter === 'recent' 
+            {filter === 'recent'
               ? 'You don\'t have any reports from the last 30 days. Check back soon!'
               : 'Your physician will share progress reports here as you continue your therapy.'
             }
@@ -312,10 +310,7 @@ export function PatientReportsPage() {
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-3">Report Information</h4>
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Report ID:</span>
-                      <span className="font-medium text-gray-900">{selectedReport.id}</span>
-                    </div>
+
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Generated:</span>
                       <span className="font-medium text-gray-900">

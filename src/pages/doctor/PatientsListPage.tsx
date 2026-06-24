@@ -57,8 +57,8 @@ export function PatientsListPage() {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(patient =>
-        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.name ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (patient.email ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (patient.age && patient.age.toString().includes(searchTerm))
       );
     }

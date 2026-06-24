@@ -7,8 +7,8 @@ import { getAllDoctorsWithCommunications } from '../../services/api/doctor.api';
 import { createWeeklyReport, updateWeeklyReport, getReportByPlan } from '../../services/api/weeklyReport.api';
 import type { PatientDetails, TherapyPlan } from '../../services/api/patients.api';
 import { resolveMediaUrl } from '../../utils/mediaUrl';
-import { 
-  User, Calendar, Activity, Target, FileText, Plus, Edit2, 
+import {
+  User, Calendar, Activity, Target, FileText, Plus, Edit2,
   Trash2, CheckCircle, AlertCircle, ChevronRight, X, LineChart
 } from 'lucide-react';
 
@@ -71,12 +71,12 @@ export function PatientDetailPage() {
 
     try {
       console.log('Loading patient:', { doctorId: user.id, patientId });
-      
+
       const patientData = await getPatientDetails(user.id, patientId);
       setPatient(patientData);
       setIsFormerPatient(!!(patientData as any).isFormer);
       setDiagnosisValue(patientData.diagnosis || '');
-      
+
       try {
         const [plansData] = await Promise.all([
           getPatientPlans(user.id, patientId),
@@ -85,7 +85,7 @@ export function PatientDetailPage() {
           (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
         );
         setPlans(sortedPlans);
-        
+
         const progressPromises = plansData.map(async (plan) => {
           try {
             const progress = await getPlanProgress(plan.id);
@@ -123,7 +123,7 @@ export function PatientDetailPage() {
       console.error('Error loading patient:', err);
       const status = err?.response?.status;
       const errorData = err?.response?.data;
-      
+
       if (status === 404) {
         const errorMessage = errorData?.error || 'Patient not found';
         setError(errorMessage);
@@ -350,7 +350,7 @@ export function PatientDetailPage() {
               <LineChart size={16} />
               Progress Analytics
             </button>
-            <div className="text-sm text-gray-600">Patient ID: #{patient.id}</div>
+
           </div>
         </div>
       </div>
@@ -363,7 +363,7 @@ export function PatientDetailPage() {
             </div>
             <div>
               <p className="font-medium text-red-900">{error}</p>
-              <button 
+              <button
                 onClick={loadPatientData}
                 className="text-sm text-red-600 hover:text-red-800 mt-1"
               >
@@ -511,7 +511,7 @@ export function PatientDetailPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-300">Avg Progress</span>
                     <span className="font-medium">
-                      {plans.length > 0 
+                      {plans.length > 0
                         ? `${(Object.values(planProgress).reduce((a, b) => a + b, 0) / plans.length).toFixed(1)}%`
                         : '0%'
                       }
@@ -532,13 +532,13 @@ export function PatientDetailPage() {
               <p className="text-gray-600 mt-1">Manage treatment plans and track patient progress</p>
             </div>
             {!isFormerPatient && (
-            <button
-              onClick={() => setShowAddPlanForm(!showAddPlanForm)}
-              className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-gray-800 transition-all"
-            >
-              <Plus size={18} />
-              New Plan
-            </button>
+              <button
+                onClick={() => setShowAddPlanForm(!showAddPlanForm)}
+                className="flex items-center gap-2 rounded-xl bg-gray-900 px-5 py-3 text-white font-medium hover:bg-gray-800 transition-all"
+              >
+                <Plus size={18} />
+                New Plan
+              </button>
             )}
           </div>
 
@@ -622,13 +622,13 @@ export function PatientDetailPage() {
                 {isFormerPatient ? 'No archived therapy plans on record' : 'Start by creating your first therapy plan'}
               </p>
               {!isFormerPatient && (
-              <button
-                onClick={() => setShowAddPlanForm(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-white font-medium hover:bg-gray-800 transition-all"
-              >
-                <Plus size={18} />
-                Create First Plan
-              </button>
+                <button
+                  onClick={() => setShowAddPlanForm(true)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gray-900 px-6 py-3 text-white font-medium hover:bg-gray-800 transition-all"
+                >
+                  <Plus size={18} />
+                  Create First Plan
+                </button>
               )}
             </div>
           ) : (
@@ -644,12 +644,11 @@ export function PatientDetailPage() {
                         <h3 className="text-lg font-semibold text-gray-900">
                           {plan.description || 'Untitled Plan'}
                         </h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          plan.status === 'Active' ? 'bg-green-100 text-green-700' :
-                          plan.status === 'Completed' ? 'bg-blue-100 text-blue-700' :
-                          plan.status === 'Paused' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-gray-100 text-gray-700'
-                        }`}>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${plan.status === 'Active' ? 'bg-green-100 text-green-700' :
+                            plan.status === 'Completed' ? 'bg-blue-100 text-blue-700' :
+                              plan.status === 'Paused' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-700'
+                          }`}>
                           {plan.status}
                         </span>
                       </div>
@@ -670,28 +669,28 @@ export function PatientDetailPage() {
                         </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       {!isFormerPatient ? (
-                      <>
-                      <input
-                        type="date"
-                        value={plan.endDate ? new Date(plan.endDate).toISOString().split('T')[0] : ''}
-                        onChange={(e) => handleUpdatePlanEndDate(plan.id, e.target.value)}
-                        className="text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 font-medium hover:bg-gray-50 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                        title="End date"
-                      />
-                      <select
-                        value={plan.status}
-                        onChange={(e) => handleUpdatePlanStatus(plan.id, e.target.value)}
-                        className="text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 font-medium hover:bg-gray-50 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="Paused">Paused</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Ended">Ended</option>
-                      </select>
-                      </>
+                        <>
+                          <input
+                            type="date"
+                            value={plan.endDate ? new Date(plan.endDate).toISOString().split('T')[0] : ''}
+                            onChange={(e) => handleUpdatePlanEndDate(plan.id, e.target.value)}
+                            className="text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 font-medium hover:bg-gray-50 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                            title="End date"
+                          />
+                          <select
+                            value={plan.status}
+                            onChange={(e) => handleUpdatePlanStatus(plan.id, e.target.value)}
+                            className="text-sm rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-700 font-medium hover:bg-gray-50 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                          >
+                            <option value="Active">Active</option>
+                            <option value="Paused">Paused</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Ended">Ended</option>
+                          </select>
+                        </>
                       ) : (
                         <span className="text-xs text-gray-500">Archived plans</span>
                       )}
@@ -804,7 +803,7 @@ export function PatientDetailPage() {
                           </button>
                         </div>
                       </div>
-                      
+
                       {reportsByPlan[plan.id] ? (
                         <div className="rounded-lg bg-green-50 border border-green-200 p-4">
                           <div className="flex items-start gap-3">
@@ -889,7 +888,7 @@ export function PatientDetailPage() {
               </div>
               <p className="text-gray-600 mt-2">Add detailed notes about patient progress and observations</p>
             </div>
-            
+
             <div className="p-6">
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Doctor Notes</label>
@@ -905,7 +904,7 @@ export function PatientDetailPage() {
                   </span>
                 </div>
               </div>
-              
+
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => {

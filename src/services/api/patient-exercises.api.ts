@@ -36,6 +36,7 @@ export interface SpeechAttemptData {
   recognizedWord: string;
   similarityScore: number;
   isCorrect: boolean;
+  isSkipped?: boolean;
   audioDurationSeconds: number;
   attemptedAt: string;
 }

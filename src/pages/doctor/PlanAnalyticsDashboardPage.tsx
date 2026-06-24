@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import type { PlanSessionTimelineDto } from '../../services/api/plan-analytics.api';
 import {
   AlertCircle,
   ArrowLeft,
@@ -37,9 +38,9 @@ import {
   Layers,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import { getPlanAnalytics, type TherapyPlanAnalyticsDto, type PlanWordPerformanceDto, type PlanCategoryPerformanceDto } from '../../services/api/plan-analytics.api';
+import { getPlanAnalytics, type TherapyPlanAnalyticsDto, type PlanWordPerformanceDto } from '../../services/api/plan-analytics.api';
 import { getPatientDetails } from '../../services/api/patients.api';
-import { formatAnalyticsDate, getTrendBadgeClass } from '../../utils/patientAnalyticsCharts';
+import { formatAnalyticsDate } from '../../utils/patientAnalyticsCharts';
 
 const CHART_COLORS = [
   '#2563eb', // blue
@@ -212,9 +213,9 @@ export function PlanAnalyticsDashboardPage() {
       const q = wordSearch.toLowerCase();
       filtered = filtered.filter(
         (w) =>
-          w.word.toLowerCase().includes(q) ||
-          w.wordEnglish.toLowerCase().includes(q) ||
-          w.wordArabic.toLowerCase().includes(q) ||
+          (w.word ?? '').toLowerCase().includes(q) ||
+          (w.wordEnglish ?? '').toLowerCase().includes(q) ||
+          (w.wordArabic ?? '').toLowerCase().includes(q) ||
           w.category?.toLowerCase().includes(q)
       );
     }
@@ -399,6 +400,7 @@ export function PlanAnalyticsDashboardPage() {
             <nav className="-mb-px flex space-x-6 overflow-x-auto" aria-label="Tabs">
               {[
                 { id: 'summary', name: 'Plan Summary', icon: Activity },
+                { id: 'sessions', name: 'Sessions', icon: Clock },
                 { id: 'words', name: 'Word Breakdown', icon: BookOpen },
                 { id: 'categories', name: 'Category Analytics', icon: Layers },
                 { id: 'strengths-weaknesses', name: 'Strengths & Weaknesses', icon: Award },
@@ -831,7 +833,9 @@ export function PlanAnalyticsDashboardPage() {
                     <h3 className="text-lg font-bold text-gray-900 mb-2">Category Accuracy Rates</h3>
                     <p className="text-sm text-gray-500 mb-6">Percentage of successfully completed words in each category</p>
                   </div>
-                  <div className="h-64 w-full">
+                  <div className="h-64 w-full" style={{ minHeight: 256 }}
+                    ref={(el) => { /* ensure container is mounted before rendering */ el?.offsetWidth; }}
+                  >
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
                         data={analytics.categories}
@@ -845,7 +849,7 @@ export function PlanAnalyticsDashboardPage() {
                           formatter={(value) => [`${Math.round(Number(value))}%`, 'Mastery Rate']}
                         />
                         <Bar dataKey="accuracyPercent" radius={[0, 4, 4, 0]}>
-                          {analytics.categories.map((entry, index) => (
+                          {analytics.categories.map((_entry, index) => (
                             <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                           ))}
                         </Bar>
@@ -855,6 +859,11 @@ export function PlanAnalyticsDashboardPage() {
                 </div>
               </div>
             </div>
+          )}
+
+          {/* TAB: SESSIONS TIMELINE */}
+          {activeTab === 'sessions' && (
+            <SessionsTab sessions={analytics.sessionTimeline ?? []} />
           )}
 
           {/* TAB 4: STRENGTHS & WEAKNESSES */}
@@ -1362,6 +1371,177 @@ export function PlanAnalyticsDashboardPage() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+// ─── Sessions Tab Component ──────────────────────────────────────────────────
+
+function SessionsTab({ sessions }: { sessions: PlanSessionTimelineDto[] }) {
+  const [expandedSessions, setExpandedSessions] = React.useState<Record<number, boolean>>({});
+
+  const toggle = (id: number) =>
+    setExpandedSessions((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+  const fmtDur = (secs: number) => {
+    if (!secs || secs <= 0) return '0s';
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  };
+
+  if (sessions.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-gray-300 bg-white p-16 text-center shadow-sm animate-fade-in">
+        <Clock className="mx-auto mb-4 h-14 w-14 text-gray-300" />
+        <h3 className="text-lg font-bold text-gray-700">No Sessions Recorded</h3>
+        <p className="mt-2 text-sm text-gray-500">
+          Sessions will appear here once the patient completes their first exercise.
+        </p>
+      </div>
+    );
+  }
+
+  const overallAccuracy = sessions.length > 0
+    ? Math.round(sessions.reduce((s, r) => s + r.accuracyPercent, 0) / sessions.length)
+    : 0;
+  const totalAttempts = sessions.reduce((s, r) => s + r.totalAttempts, 0);
+  const totalSucceeded = sessions.reduce((s, r) => s + r.wordsSucceeded, 0);
+  const totalWords = sessions.reduce((s, r) => s + r.wordsAttempted, 0);
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Plan-level summary bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {[
+          { label: 'Total Sessions', value: sessions.length, border: 'border-blue-100', bg: 'bg-blue-50/40', text: 'text-blue-900', labelColor: 'text-blue-600' },
+          { label: 'Overall Accuracy', value: `${overallAccuracy}%`, border: 'border-emerald-100', bg: 'bg-emerald-50/40', text: 'text-emerald-900', labelColor: 'text-emerald-600' },
+          { label: 'Words Succeeded', value: `${totalSucceeded}/${totalWords}`, border: 'border-violet-100', bg: 'bg-violet-50/40', text: 'text-violet-900', labelColor: 'text-violet-600' },
+          { label: 'Total Attempts', value: totalAttempts, border: 'border-amber-100', bg: 'bg-amber-50/40', text: 'text-amber-900', labelColor: 'text-amber-600' },
+        ].map((stat) => (
+          <div key={stat.label} className={`rounded-2xl border ${stat.border} ${stat.bg} p-5 shadow-sm`}>
+            <p className={`text-xs font-semibold ${stat.labelColor} uppercase tracking-wider`}>{stat.label}</p>
+            <p className={`text-3xl font-extrabold ${stat.text} mt-1`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Session rows */}
+      <div className="space-y-3">
+        {[...sessions].reverse().map((session) => {
+          const isOpen = !!expandedSessions[session.trainingSessionId];
+          const wordSuccessRate = session.wordsAttempted > 0
+            ? Math.round((session.wordsSucceeded / session.wordsAttempted) * 100) : 0;
+
+          return (
+            <div
+              key={session.trainingSessionId}
+              className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-all"
+            >
+              {/* Session header — click to expand */}
+              <button
+                onClick={() => toggle(session.trainingSessionId)}
+                className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-50 transition-colors text-left"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <span className="text-sm font-bold text-blue-700">#{session.sessionNumber}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {fmt(session.startTime)} · {fmtTime(session.startTime)}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      Duration: {fmtDur(session.durationSeconds)} · {session.wordsAttempted} words
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 mr-4">
+                  <div className="text-center hidden sm:block">
+                    <p className="text-xs text-gray-400 font-medium">Accuracy</p>
+                    <p className={`text-base font-bold ${session.accuracyPercent >= 70 ? 'text-emerald-600' : session.accuracyPercent >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                      {Math.round(session.accuracyPercent)}%
+                    </p>
+                  </div>
+                  <div className="text-center hidden sm:block">
+                    <p className="text-xs text-gray-400 font-medium">Similarity</p>
+                    <p className="text-base font-bold text-gray-700">{Math.round(session.averageSimilarityScore)}%</p>
+                  </div>
+                  <div className="text-center hidden sm:block">
+                    <p className="text-xs text-gray-400 font-medium">Words</p>
+                    <p className={`text-base font-bold ${wordSuccessRate >= 70 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                      {session.wordsSucceeded}/{session.wordsAttempted}
+                    </p>
+                  </div>
+                  <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </div>
+              </button>
+
+              {/* Expandable word breakdown */}
+              {isOpen && (
+                <div className="border-t border-gray-100 px-6 pb-5 pt-4">
+                  {session.words.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic">No word-level data recorded for this session.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-100 text-left">
+                            <th className="pb-2 font-semibold text-gray-500 text-xs uppercase tracking-wider pr-4">Word</th>
+                            <th className="pb-2 font-semibold text-gray-500 text-xs uppercase tracking-wider pr-4">Category</th>
+                            <th className="pb-2 font-semibold text-gray-500 text-xs uppercase tracking-wider pr-4 text-center">Attempts</th>
+                            <th className="pb-2 font-semibold text-gray-500 text-xs uppercase tracking-wider pr-4 text-center">Best Score</th>
+                            <th className="pb-2 font-semibold text-gray-500 text-xs uppercase tracking-wider text-center">Result</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                          {session.words.map((w) => (
+                            <tr key={w.expectedWord} className="hover:bg-gray-50/50">
+                              <td className="py-2 pr-4 font-medium text-gray-900">{w.expectedWord}</td>
+                              <td className="py-2 pr-4 text-gray-500 text-xs">{w.category ?? '—'}</td>
+                              <td className="py-2 pr-4 text-center text-gray-700">{w.totalAttempts}</td>
+                              <td className="py-2 pr-4">
+                                <div className="flex items-center gap-2 justify-center">
+                                  <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className={`h-full rounded-full ${w.bestSimilarityScore >= 70 ? 'bg-emerald-500' : w.bestSimilarityScore >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                                      style={{ width: `${Math.min(100, w.bestSimilarityScore)}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs font-medium text-gray-600 w-9 text-right">
+                                    {Math.round(w.bestSimilarityScore)}%
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2 text-center">
+                                {w.succeeded ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                                    <Check className="h-3 w-3" /> Passed
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-700">
+                                    <X className="h-3 w-3" /> Needs Work
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

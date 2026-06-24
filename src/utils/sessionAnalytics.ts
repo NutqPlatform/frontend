@@ -12,6 +12,7 @@ export function recordSpeechAttempt(
     recognizedWord: string;
     similarityScore: number;
     isCorrect: boolean;
+    isSkipped?: boolean;
     audioDurationSeconds: number;
     attemptedAt?: string;
   }
@@ -24,15 +25,36 @@ export function recordSpeechAttempt(
     recognizedWord: params.recognizedWord,
     similarityScore: Math.round(params.similarityScore),
     isCorrect: params.isCorrect,
+    isSkipped: params.isSkipped,
     audioDurationSeconds: Math.round(params.audioDurationSeconds * 10) / 10,
     attemptedAt: params.attemptedAt ?? new Date().toISOString(),
   };
 
   wordData.speechAttempts.push(attempt);
   wordData.attempts = wordData.speechAttempts.length;
-  wordData.firstTryCorrect = wordData.speechAttempts[0]?.isCorrect ?? false;
+  // firstTryCorrect is only true if the first REAL (non-skipped) attempt was correct
+  const firstRealAttempt = wordData.speechAttempts.find((a) => !a.isSkipped);
+  wordData.firstTryCorrect = firstRealAttempt?.isCorrect ?? false;
 
   return attempt;
+}
+
+/**
+ * Records a skip event for a word — marks it as not attempted.
+ * Skipped words lower completion quality and appear in weaknesses.
+ */
+export function recordSkippedWord(
+  wordData: WordAttemptData,
+  expectedWord: string
+): SpeechAttemptData {
+  return recordSpeechAttempt(wordData, {
+    expectedWord,
+    recognizedWord: '',
+    similarityScore: 0,
+    isCorrect: false,
+    isSkipped: true,
+    audioDurationSeconds: 0,
+  });
 }
 
 export function createEmptyWordAttempt(word: {

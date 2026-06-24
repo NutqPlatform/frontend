@@ -9,6 +9,7 @@ import {
   createEmptyWordAttempt,
   getExpectedWord,
   recordSpeechAttempt,
+  recordSkippedWord,
 } from '../../utils/sessionAnalytics';
 
 interface PhotoFrameExerciseProps {
@@ -249,14 +250,10 @@ export function PhotoFrameExercise({
     setConfirmedWords(prev => new Set([...prev, currentWord.id]));
     const d = wordDataRef.current.get(currentWord.id);
     if (d && (!d.speechAttempts || d.speechAttempts.length === 0)) {
+      // No real speech attempt was recorded — this is a skip.
+      // Mark as not attempted (isSkipped=true, isCorrect=false).
       const expectedWord = getExpectedWord(currentWord.wordEnglish, currentWord.wordArabic);
-      recordSpeechAttempt(d, {
-        expectedWord,
-        recognizedWord: expectedWord,
-        similarityScore: 100,
-        isCorrect: true,
-        audioDurationSeconds: Math.max(0, (Date.now() - wordStartTimeRef.current) / 1000),
-      });
+      recordSkippedWord(d, expectedWord);
       wordDataRef.current.set(currentWord.id, d);
     }
   };

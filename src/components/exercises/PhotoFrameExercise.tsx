@@ -26,7 +26,7 @@ interface PhotoFrameExerciseProps {
   allRepetitionData?: RepetitionData[];
 }
 
-const BASE_URL = 'http://localhost:5246';
+const BASE_URL = 'https://backend-production-cae8.up.railway.app';
 const getAssetUrl = (url?: string) => {
   if (!url) return undefined;
   const path = url.startsWith('/') ? url : `/${url}`;

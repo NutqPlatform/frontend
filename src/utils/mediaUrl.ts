@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5246';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://backend-production-cae8.up.railway.app';
 
 export function resolveMediaUrl(url?: string | null): string | undefined {
   if (!url) return undefined;

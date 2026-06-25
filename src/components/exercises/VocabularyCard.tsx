@@ -12,7 +12,7 @@ export function VocabularyCard({ word, index, isCompleted = false }: VocabularyC
   const [isPlaying, setIsPlaying] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  const baseUrl = 'http://localhost:5246';
+  const baseUrl = 'https://backend-production-cae8.up.railway.app';
 
   const getAssetUrl = (url?: string) => {
     if (!url) return undefined;

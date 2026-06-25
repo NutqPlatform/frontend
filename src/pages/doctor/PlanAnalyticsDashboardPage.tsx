@@ -359,7 +359,7 @@ export function PlanAnalyticsDashboardPage() {
         </div>
         <div className="flex gap-2 self-start">
           <a
-            href={`http://localhost:5246/api/doctors/${user?.id}/plans/${planId}/analytics/pdf-model`}
+            href={`https://backend-production-cae8.up.railway.app/api/doctors/${user?.id}/plans/${planId}/analytics/pdf-model`}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"

@@ -15,7 +15,7 @@ export function ExercisesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [favorites, setFavorites] = useState<number[]>([]);
 
-  const baseUrl = 'http://localhost:5246';
+  const baseUrl = 'https://backend-production-cae8.up.railway.app';
 
   const getImageSrc = (url?: string) => {
     if (!url) return undefined;
